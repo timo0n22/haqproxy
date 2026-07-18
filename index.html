@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hackproxy</title>
+<style>
+  :root{
+    --bg: #0a0e12;
+    --panel: #10161c;
+    --panel-2: #151d25;
+    --border: #202b34;
+    --text: #d7e0e6;
+    --text-dim: #7c8b96;
+    --accent: #21d4c8;
+    --accent-dim: #17948c;
+    --ok: #3ecf8e;
+    --warn: #e8b339;
+    --err: #e8536a;
+    --mono: ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, "Inter", "Segoe UI", sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; margin:0; }
+  body{
+    background: var(--bg); color: var(--text); font-family: var(--sans);
+    font-size: 13px; display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  header{
+    display:flex; align-items:center; gap:16px; padding:10px 16px;
+    border-bottom:1px solid var(--border); background: var(--panel); flex-shrink:0;
+  }
+  header .logo{ font-family: var(--mono); font-weight:600; color: var(--accent); letter-spacing:0.5px; }
+  header .logo::before{ content:"› "; color: var(--accent-dim); }
+  .scope-bar{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .scope-bar input{ background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:4px 8px; border-radius:4px; font-size:12px; width:180px; }
+  button{
+    background: var(--panel-2); color: var(--text); border:1px solid var(--border);
+    border-radius:4px; padding:5px 10px; font-size:12px; cursor:pointer; font-family: var(--sans);
+  }
+  button:hover{ border-color: var(--accent-dim); color: var(--accent); }
+  button.primary{ background: var(--accent-dim); border-color: var(--accent-dim); color:#04211e; font-weight:600; }
+  button.primary:hover{ background: var(--accent); color:#04211e; }
+
+  main{ flex:1; display:flex; min-height:0; }
+  .panel-history{ width:38%; min-width:340px; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; min-height:0; }
+  .panel-repeater{ flex:1; display:flex; flex-direction:column; min-height:0; }
+
+  .filters{ display:flex; gap:6px; padding:8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .filters input{ flex:1; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:5px 8px; border-radius:4px; font-size:12px; font-family: var(--mono); }
+
+  .history-list{ overflow-y:auto; flex:1; }
+  .history-row{ display:grid; grid-template-columns: 46px 52px 1fr 44px 56px;
+    gap:6px; padding:6px 10px; border-bottom:1px solid var(--border); cursor:pointer; font-family: var(--mono); font-size:11.5px; }
+  .history-row:hover{ background: var(--panel-2); }
+  .history-row.selected{ background:#122029; border-left:2px solid var(--accent); }
+  .history-row .method{ color: var(--accent); font-weight:600; }
+  .history-row .path{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text); }
+  .history-row .path .host{ color: var(--text-dim); }
+  .status-2{ color: var(--ok); } .status-3{ color:#5bb3e0; } .status-4{ color: var(--warn); }
+  .status-5{ color: var(--err); } .status-0{ color: var(--text-dim); }
+
+  .tabs{ display:flex; align-items:center; gap:2px; padding:6px 8px 0 8px; border-bottom:1px solid var(--border);
+    flex-shrink:0; overflow-x:auto; }
+  .tab{ padding:6px 12px; font-size:12px; border-radius:4px 4px 0 0; background:var(--panel-2);
+    border:1px solid var(--border); border-bottom:none; cursor:pointer; color:var(--text-dim); white-space:nowrap; }
+  .tab.active{ color: var(--accent); background: var(--bg); border-color: var(--border); }
+  .tab .close{ margin-left:8px; color:var(--text-dim); }
+  .tab .close:hover{ color: var(--err); }
+
+  .repeater-target{ display:flex; gap:8px; align-items:center; padding:8px; border-bottom:1px solid var(--border); flex-shrink:0; }
+  .repeater-target input[type=text]{ background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    padding:5px 8px; border-radius:4px; font-size:12px; font-family: var(--mono); }
+  .repeater-target .host{ flex:1; }
+  .repeater-target .port{ width:70px; }
+  .repeater-target label{ display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-dim); white-space:nowrap; }
+
+  .repeater-body{ flex:1; display:flex; min-height:0; }
+  .editor-col{ flex:1; display:flex; flex-direction:column; min-height:0; border-right:1px solid var(--border); }
+  .editor-col:last-child{ border-right:none; }
+  .editor-col .col-title{ padding:6px 10px; font-size:11px; text-transform:uppercase; letter-spacing:0.5px;
+    color:var(--text-dim); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; }
+  textarea{ flex:1; background:var(--bg); color:var(--text); border:none; outline:none; resize:none;
+    font-family: var(--mono); font-size:12px; padding:10px; line-height:1.5; }
+  .empty-state{ display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-dim); font-size:12px; }
+
+  .scope-list{ padding:8px; border-top:1px solid var(--border); font-family:var(--mono); font-size:11px; flex-shrink:0; max-height:110px; overflow-y:auto; }
+  .scope-item{ display:flex; justify-content:space-between; padding:2px 0; color:var(--text-dim); }
+  .scope-item.enabled{ color:var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">hackproxy</div>
+  <button id="btnRefresh">↻ обновить</button>
+  <div class="scope-bar">
+    <input id="scopeInput" placeholder="scope, напр. *.example.com" />
+    <button id="btnAddScope">+ scope</button>
+    <label style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim)">
+      <input type="checkbox" id="scopeOnly" /> только scope
+    </label>
+  </div>
+</header>
+
+<main>
+  <section class="panel-history">
+    <div class="filters">
+      <input id="fHost" placeholder="host" />
+      <input id="fQ" placeholder="поиск по содержимому" />
+    </div>
+    <div class="history-list" id="historyList"></div>
+    <div class="scope-list" id="scopeList"></div>
+  </section>
+
+  <section class="panel-repeater">
+    <div class="tabs" id="tabs"></div>
+    <div id="repeaterArea" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+      <div class="empty-state">Выберите запрос слева или нажмите “+” чтобы создать вкладку Repeater</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const state = {
+  tabs: [],        // {id, host, port, tls, verify_tls, raw_request, raw_response, status, duration_ms, error, parent_id}
+  activeTab: null,
+  selectedHistoryId: null,
+};
+let tabSeq = 1;
+
+function el(sel){ return document.querySelector(sel); }
+function esc(s){ return (s||"").replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function statusClass(status){
+  if(!status) return 'status-0';
+  return 'status-' + Math.floor(status/100);
+}
+
+async function loadHistory(){
+  const params = new URLSearchParams();
+  if(el('#fHost').value) params.set('host', el('#fHost').value);
+  if(el('#fQ').value) params.set('q', el('#fQ').value);
+  if(el('#scopeOnly').checked) params.set('scope_only', '1');
+  const res = await fetch('/api/history?' + params.toString());
+  const items = await res.json();
+  const list = el('#historyList');
+  list.innerHTML = items.map(it => `
+    <div class="history-row ${it.id===state.selectedHistoryId?'selected':''}" data-id="${it.id}">
+      <span class="${statusClass(it.resp_status)}">${it.resp_status || (it.error ? 'ERR' : '—')}</span>
+      <span class="method">${esc(it.method)}</span>
+      <span class="path"><span class="host">${esc(it.host)}</span> ${esc(it.path)}</span>
+      <span>${it.duration_ms!=null ? it.duration_ms+'ms' : '—'}</span>
+      <span style="color:var(--text-dim)">${it.source}</span>
+    </div>
+  `).join('');
+  list.querySelectorAll('.history-row').forEach(row => {
+    row.addEventListener('click', () => openHistoryInTab(parseInt(row.dataset.id)));
+  });
+}
+
+async function openHistoryInTab(id){
+  state.selectedHistoryId = id;
+  const res = await fetch('/api/history/' + id);
+  const entry = await res.json();
+  const tab = {
+    id: tabSeq++,
+    title: entry.method + ' ' + entry.host,
+    host: entry.host, port: entry.port, tls: entry.scheme === 'https', verify_tls: false,
+    raw_request: entry.raw_request, raw_response: entry.raw_response,
+    status: entry.resp_status, duration_ms: entry.duration_ms, error: entry.error,
+    parent_id: entry.id,
+  };
+  state.tabs.push(tab);
+  state.activeTab = tab.id;
+  renderTabs();
+  loadHistory();
+}
+
+function newEmptyTab(){
+  const tab = {
+    id: tabSeq++, title: 'новый', host: '', port: 443, tls: true, verify_tls: false,
+    raw_request: 'GET / HTTP/1.1\r\nHost: \r\nUser-Agent: hackproxy\r\n\r\n',
+    raw_response: null, status: null, duration_ms: null, error: null, parent_id: null,
+  };
+  state.tabs.push(tab);
+  state.activeTab = tab.id;
+  renderTabs();
+}
+
+function closeTab(id, ev){
+  ev.stopPropagation();
+  state.tabs = state.tabs.filter(t => t.id !== id);
+  if(state.activeTab === id){
+    state.activeTab = state.tabs.length ? state.tabs[state.tabs.length-1].id : null;
+  }
+  renderTabs();
+}
+
+function renderTabs(){
+  const tabsEl = el('#tabs');
+  tabsEl.innerHTML = state.tabs.map(t => `
+    <div class="tab ${t.id===state.activeTab?'active':''}" data-id="${t.id}">
+      ${esc(t.title)}<span class="close" data-close="${t.id}">×</span>
+    </div>
+  `).join('') + `<div class="tab" id="tabAdd" style="color:var(--accent)">+</div>`;
+
+  tabsEl.querySelectorAll('.tab[data-id]').forEach(elx => {
+    elx.addEventListener('click', () => { state.activeTab = parseInt(elx.dataset.id); renderTabs(); });
+  });
+  tabsEl.querySelectorAll('[data-close]').forEach(elx => {
+    elx.addEventListener('click', (ev) => closeTab(parseInt(elx.dataset.close), ev));
+  });
+  el('#tabAdd').addEventListener('click', newEmptyTab);
+
+  renderRepeaterArea();
+}
+
+function renderRepeaterArea(){
+  const area = el('#repeaterArea');
+  const tab = state.tabs.find(t => t.id === state.activeTab);
+  if(!tab){
+    area.innerHTML = '<div class="empty-state">Выберите запрос слева или нажмите “+” чтобы создать вкладку Repeater</div>';
+    return;
+  }
+  area.innerHTML = `
+    <div class="repeater-target">
+      <input class="host" type="text" id="rtHost" placeholder="host" value="${esc(tab.host)}" />
+      <input class="port" type="text" id="rtPort" placeholder="port" value="${tab.port}" />
+      <label><input type="checkbox" id="rtTls" ${tab.tls?'checked':''}/> TLS</label>
+      <label><input type="checkbox" id="rtVerify" ${tab.verify_tls?'checked':''}/> проверять сертификат</label>
+      <button class="primary" id="btnSend">Send ▸</button>
+      <span id="rtStatus" style="font-family:var(--mono); font-size:12px; margin-left:auto;
+        color:${tab.error ? 'var(--err)' : ''}">
+        ${tab.error ? 'ошибка: '+esc(tab.error) : (tab.status ? tab.status + ' · ' + (tab.duration_ms||0) + 'ms' : '')}
+      </span>
+    </div>
+    <div class="repeater-body">
+      <div class="editor-col">
+        <div class="col-title">Request (raw)</div>
+        <textarea id="reqEditor" spellcheck="false">${esc(tab.raw_request)}</textarea>
+      </div>
+      <div class="editor-col">
+        <div class="col-title">Response (raw)</div>
+        <textarea id="respViewer" spellcheck="false" readonly>${esc(tab.raw_response || '')}</textarea>
+      </div>
+    </div>
+  `;
+
+  el('#rtHost').addEventListener('input', e => tab.host = e.target.value);
+  el('#rtPort').addEventListener('input', e => tab.port = parseInt(e.target.value)||443);
+  el('#rtTls').addEventListener('change', e => tab.tls = e.target.checked);
+  el('#rtVerify').addEventListener('change', e => tab.verify_tls = e.target.checked);
+  el('#reqEditor').addEventListener('input', e => tab.raw_request = e.target.value);
+  el('#btnSend').addEventListener('click', () => sendRepeater(tab));
+}
+
+async function sendRepeater(tab){
+  el('#rtStatus').textContent = '…';
+  const res = await fetch('/api/repeater/send', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      host: tab.host, port: tab.port, tls: tab.tls, verify_tls: tab.verify_tls,
+      raw_request: tab.raw_request, parent_id: tab.parent_id,
+    })
+  });
+  const data = await res.json();
+  tab.raw_response = data.raw_response;
+  tab.status = data.status;
+  tab.duration_ms = data.duration_ms;
+  tab.error = data.error;
+  renderRepeaterArea();
+  loadHistory();
+}
+
+async function loadScope(){
+  const res = await fetch('/api/scope');
+  const items = await res.json();
+  el('#scopeList').innerHTML = items.map(s => `
+    <div class="scope-item ${s.enabled?'enabled':''}">
+      <span>${esc(s.pattern)}</span>
+      <span>
+        <a href="#" data-toggle="${s.id}" data-en="${s.enabled?0:1}" style="color:var(--accent-dim)">${s.enabled?'выкл':'вкл'}</a>
+        &nbsp;<a href="#" data-del="${s.id}" style="color:var(--err)">✕</a>
+      </span>
+    </div>
+  `).join('');
+  el('#scopeList').querySelectorAll('[data-toggle]').forEach(a => {
+    a.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      await fetch('/api/scope/'+a.dataset.toggle+'/toggle', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({enabled: a.dataset.en === '1'})});
+      loadScope();
+    });
+  });
+  el('#scopeList').querySelectorAll('[data-del]').forEach(a => {
+    a.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      await fetch('/api/scope/'+a.dataset.del, {method:'DELETE'});
+      loadScope();
+    });
+  });
+}
+
+el('#btnRefresh').addEventListener('click', loadHistory);
+el('#fHost').addEventListener('input', debounce(loadHistory, 300));
+el('#fQ').addEventListener('input', debounce(loadHistory, 300));
+el('#scopeOnly').addEventListener('change', loadHistory);
+el('#btnAddScope').addEventListener('click', async () => {
+  const v = el('#scopeInput').value.trim();
+  if(!v) return;
+  await fetch('/api/scope', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({pattern:v})});
+  el('#scopeInput').value = '';
+  loadScope();
+});
+
+function debounce(fn, ms){ let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn(...a), ms); }; }
+
+loadHistory();
+loadScope();
+setInterval(loadHistory, 4000); // живое обновление истории, пока идёт проксирование браузера
+</script>
+</body>
+</html>
