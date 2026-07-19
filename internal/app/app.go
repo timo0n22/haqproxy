@@ -93,9 +93,12 @@ func Setup(opts Options, logger *log.Logger) (*Backend, error) {
 		}()
 	}
 
+	// Прокси в отдельной горутине. Ошибка (например, порт занят другим
+	// инстансом) НЕ фатальна: UI-окно всё равно открывается, история/настройки
+	// доступны — иначе GUI-приложение молча закрылось бы без окна.
 	go func() {
 		if err := p.ListenAndServe(opts.ProxyAddr); err != nil {
-			logger.Fatalf("proxy: %v", err)
+			logger.Printf("ВНИМАНИЕ: прокси не запущен на %s: %v (перехват трафика не работает; освободите порт или задайте другой через -proxy)", opts.ProxyAddr, err)
 		}
 	}()
 
