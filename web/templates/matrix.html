@@ -1,0 +1,87 @@
+{{define "matrix_view"}}
+<div class="toolbar">
+  <h2>AuthMatrix</h2>
+  <span class="hint">Один запрос под разными identity → сравнение доступа (IDOR / broken access control).</span>
+</div>
+<div class="content">
+  <div class="split">
+    <div class="left">
+      <div class="rawpane">
+        <h3>Identities</h3>
+        <div id="identity-list">{{template "identity_list" .}}</div>
+        <form hx-post="/api/identities" hx-target="#identity-list" hx-swap="innerHTML"
+              hx-on::after-request="this.reset()" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
+          <input type="text" name="name" placeholder="имя identity (напр. Admin, User B, Unauthenticated)">
+          <textarea name="headers" rows="4" spellcheck="false"
+                    placeholder="Заголовки для подмены, по одному на строку:&#10;Cookie: session=abc123&#10;Authorization: Bearer eyJ..."></textarea>
+          <div><button class="primary" type="submit">Добавить identity</button></div>
+        </form>
+      </div>
+    </div>
+    <div class="right">
+      <div class="rawpane">
+        <h3>Базовый запрос</h3>
+        <form hx-post="/api/matrix/run" hx-target="#matrix-results" hx-swap="innerHTML">
+          <div class="target-row" style="margin-bottom:8px;">
+            <input type="text" class="host" name="host" placeholder="host" value="{{.BaseHost}}">
+            <input type="number" class="port" name="port" placeholder="port" value="{{.BasePort}}">
+            <label class="check"><input type="checkbox" name="tls" value="1" {{if .BaseTLS}}checked{{end}}> TLS</label>
+          </div>
+          <textarea name="raw_request" rows="12" spellcheck="false"
+                    placeholder="GET /api/orders/123 HTTP/1.1&#10;Host: target&#10;&#10;">{{.BaseRaw}}</textarea>
+          {{if .BaseID}}<input type="hidden" name="base_entry_id" value="{{.BaseID}}">{{end}}
+          <div style="margin:10px 0;">
+            <div class="hint" style="margin-bottom:6px;">Прогнать под identity (первая отмеченная — baseline):</div>
+            {{range .Identities}}
+            <label class="check" style="display:block; margin:3px 0;">
+              <input type="checkbox" name="identity_id" value="{{.ID}}"> {{.Name}}
+            </label>
+            {{else}}
+            <div class="hint err">Сначала добавьте хотя бы одну identity слева.</div>
+            {{end}}
+          </div>
+          <button class="primary" type="submit">Запустить матрицу ▶</button>
+        </form>
+        <div id="matrix-results" style="margin-top:16px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "identity_list"}}
+{{range .Identities}}
+<div class="scope-row">
+  <span class="pat">{{.Name}} <span class="hint">({{len .Headers}} загол.)</span></span>
+  <button class="btn danger" hx-delete="/api/identities/{{.ID}}" hx-target="#identity-list" hx-swap="innerHTML">Удалить</button>
+</div>
+{{else}}
+<div class="hint">Identity ещё нет.</div>
+{{end}}
+{{end}}
+
+{{define "matrix_results"}}
+{{if .Rows}}
+<table class="grid">
+  <thead><tr><th>Identity</th><th>Статус</th><th>Тело, байт</th><th>Хэш</th><th>ms</th><th></th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+  <tr {{if .Suspicious}}style="background:rgba(229,83,75,.18);"{{end}}>
+    <td>{{.IdentityName}}{{if .IsBaseline}} <span class="hint">baseline</span>{{end}}</td>
+    <td class="{{statusClass .Status}}">{{status .Status}}</td>
+    <td>{{.BodyLen}}</td>
+    <td class="hint">{{.BodyHash}}</td>
+    <td>{{.DurationMs}}</td>
+    <td>{{if .Error}}<span class="err" title="{{.Error}}">ошибка</span>{{else if .Suspicious}}<span class="err">⚠ возможный IDOR</span>{{end}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+<div class="hint" style="margin-top:8px;">
+  ⚠ — статус и длина тела близки к baseline у менее привилегированной identity.
+  Это подсказка «стоит посмотреть», а не подтверждение: сверьте тела вручную.
+</div>
+{{else}}
+<div class="hint">Отметьте identity и запустите матрицу.</div>
+{{end}}
+{{end}}

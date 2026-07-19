@@ -80,6 +80,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/replay/close/{id}", s.handleReplayClose)
 	mux.HandleFunc("POST /api/replay/send/{id}", s.handleReplaySend)
 
+	// AuthMatrix
+	mux.HandleFunc("GET /view/matrix", s.handleMatrixView)
+	mux.HandleFunc("POST /api/identities", s.handleIdentityAdd)
+	mux.HandleFunc("DELETE /api/identities/{id}", s.handleIdentityDelete)
+	mux.HandleFunc("POST /api/matrix/run", s.handleMatrixRun)
+
 	// Scope
 	mux.HandleFunc("GET /view/scope", s.handleScopeView)
 	mux.HandleFunc("POST /api/scope", s.handleScopeAdd)
