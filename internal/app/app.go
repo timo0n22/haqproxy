@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/timo0n22/haqproxy/internal/ca"
 	"github.com/timo0n22/haqproxy/internal/proxy"
@@ -29,6 +30,7 @@ type Options struct {
 // Backend — собранный и запущенный backend: HTTP-хендлер UI и владение ресурсами.
 type Backend struct {
 	Handler http.Handler
+	UIAlpha float64 // сохранённая прозрачность окна (для GUI), 0.5..1.0; 1.0 если не задана
 	store   *store.Store
 }
 
@@ -60,7 +62,21 @@ func Setup(opts Options, logger *log.Logger) (*Backend, error) {
 		st.Close()
 		return nil, err
 	}
-	websrv.SetCollaborator(opts.CollabDomain, opts.CollabAPI, opts.CollabSecret)
+
+	// Сохранённые настройки (вкладка Settings) имеют приоритет над флагами —
+	// пользователь редактирует их в UI, и они переживают перезапуск.
+	settings, _ := st.AllSettings()
+	domain := firstNonEmpty(settings[web.SettingCollabDomain], opts.CollabDomain)
+	api := firstNonEmpty(settings[web.SettingCollabAPI], opts.CollabAPI)
+	secret := firstNonEmpty(settings[web.SettingCollabSecret], opts.CollabSecret)
+	websrv.SetCollaborator(domain, api, secret)
+
+	uiAlpha := 1.0
+	if v := settings[web.SettingUIWindowAlpha]; v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0.3 && f <= 1.0 {
+			uiAlpha = f
+		}
+	}
 
 	p := proxy.New(rootCA, st, logger)
 	p.DOMLogger = opts.DOMLogger
@@ -86,5 +102,14 @@ func Setup(opts Options, logger *log.Logger) (*Backend, error) {
 	logger.Printf("data dir: %s", opts.DataDir)
 	logger.Printf("proxy:    http://%s", opts.ProxyAddr)
 
-	return &Backend{Handler: websrv.Handler(), store: st}, nil
+	return &Backend{Handler: websrv.Handler(), UIAlpha: uiAlpha, store: st}, nil
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
 }

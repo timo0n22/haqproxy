@@ -5,6 +5,7 @@
 /collaborator-linux-amd64
 *.exe
 *.app
+/build/
 
 # Данные времени выполнения (БД, CA-сертификаты)
 /.haqproxy/

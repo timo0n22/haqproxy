@@ -68,6 +68,22 @@ func main() {
 	defer w.Destroy()
 	w.SetTitle("haqproxy")
 	w.SetSize(1280, 860, webview.HintNone)
+
+	// Живое управление прозрачностью окна из вкладки Settings.
+	if err := w.Bind("haq_setAlpha", func(alpha float64) {
+		if alpha < 0.4 {
+			alpha = 0.4
+		}
+		setWindowAlpha(w.Window(), alpha)
+	}); err != nil {
+		logger.Printf("bind: %v", err)
+	}
+
+	// Применяем сохранённую прозрачность при старте.
+	if backend.UIAlpha > 0 && backend.UIAlpha < 1.0 {
+		setWindowAlpha(w.Window(), backend.UIAlpha)
+	}
+
 	w.Navigate(url)
 	w.Run()
 }

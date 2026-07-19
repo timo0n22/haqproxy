@@ -1,0 +1,56 @@
+{{define "settings_view"}}
+<div class="toolbar">
+  <h2>Settings</h2>
+</div>
+<div class="content">
+  <div class="rawpane" style="max-width:640px;">
+
+    <h3>Collaborator (OOB)</h3>
+    <form hx-post="/api/settings/collaborator" hx-target="#collab-saved" hx-swap="innerHTML"
+          style="display:flex; flex-direction:column; gap:10px;">
+      <label class="setrow">
+        <span>Домен для payload'ов</span>
+        <input type="text" name="collab_domain" value="{{.CollabDomain}}" placeholder="cyberist.ru">
+      </label>
+      <label class="setrow">
+        <span>API VPS-Collaborator</span>
+        <input type="text" name="collab_api" value="{{.CollabAPI}}" placeholder="http://62.60.229.49:8090">
+      </label>
+      <label class="setrow">
+        <span>Секрет (Bearer)</span>
+        <input type="password" name="collab_secret" value="{{.CollabSecret}}" placeholder="общий секрет" autocomplete="off">
+      </label>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button class="primary" type="submit">Сохранить и применить</button>
+        <span id="collab-saved" class="hint"></span>
+      </div>
+      <div class="hint">Применяется сразу, без перезапуска. Payload'ы получаются <code class="k">&lt;token&gt;.{{if .CollabDomain}}{{.CollabDomain}}{{else}}&lt;домен&gt;{{end}}</code>.</div>
+    </form>
+
+    <h3 style="margin-top:24px;">Интерфейс</h3>
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <label class="setrow">
+        <span>Цветовая схема</span>
+        <select onchange="haqSetTheme(this.value)">
+          <option value="tokyo-night"        {{if eq .Theme "tokyo-night"}}selected{{end}}>Tokyo Night</option>
+          <option value="tokyo-night-light"  {{if eq .Theme "tokyo-night-light"}}selected{{end}}>Tokyo Night (light)</option>
+          <option value="gruvbox"            {{if eq .Theme "gruvbox"}}selected{{end}}>Gruvbox</option>
+          <option value="gruvbox-light"      {{if eq .Theme "gruvbox-light"}}selected{{end}}>Gruvbox (light)</option>
+          <option value="rosepine"           {{if eq .Theme "rosepine"}}selected{{end}}>Rosé Pine</option>
+          <option value="rosepine-light"     {{if eq .Theme "rosepine-light"}}selected{{end}}>Rosé Pine (light)</option>
+          <option value="catppuccin"         {{if eq .Theme "catppuccin"}}selected{{end}}>Catppuccin</option>
+          <option value="catppuccin-light"   {{if eq .Theme "catppuccin-light"}}selected{{end}}>Catppuccin (light)</option>
+        </select>
+      </label>
+      <label class="setrow">
+        <span>Прозрачность окна <span id="alpha-val" class="hint">{{.AlphaPct}}%</span></span>
+        <input type="range" min="0.4" max="1" step="0.02" value="{{.Alpha}}" oninput="haqSetAlpha(this.value)">
+      </label>
+      <div class="hint">Прозрачность окна работает только в десктоп-приложении (haqproxy-gui), в браузере не действует.</div>
+    </div>
+
+  </div>
+</div>
+{{end}}
+
+{{define "collab_saved"}}<span class="hint" style="color:var(--green);">✓ сохранено</span>{{end}}

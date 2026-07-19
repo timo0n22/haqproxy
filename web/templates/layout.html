@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="{{.Theme}}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -30,6 +30,8 @@
     <div class="nav-item" hx-get="/view/scope" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">🎯 Scope</div>
     <div class="spacer"></div>
+    <div class="nav-item" hx-get="/view/settings" hx-target="#main" hx-swap="innerHTML"
+         onclick="setActive(this)">⚙️ Settings</div>
     <div class="foot">
       TLS-перехват:<br>
       <a href="/ca-cert" download="haqproxy-ca.pem">скачать CA-сертификат</a>
@@ -44,6 +46,23 @@
     document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
     el.classList.add('active');
   }
+  // Настройки UI: тема и прозрачность окна применяются сразу и сохраняются.
+  function haqPostUI(body){
+    fetch('/api/settings/ui', {method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'}, body: body});
+  }
+  function haqSetTheme(v){
+    document.documentElement.dataset.theme = v;
+    haqPostUI('theme=' + encodeURIComponent(v));
+  }
+  function haqSetAlpha(v){
+    // Нативная прозрачность окна доступна только в GUI (webview.Bind).
+    if (window.haq_setAlpha) { try { window.haq_setAlpha(parseFloat(v)); } catch(e){} }
+    var l = document.getElementById('alpha-val');
+    if (l) l.textContent = Math.round(parseFloat(v)*100) + '%';
+    haqPostUI('alpha=' + encodeURIComponent(v));
+  }
+
   // Клик по строке истории — подсветка выбранной.
   document.body.addEventListener('click', function(e){
     const tr = e.target.closest('tr[data-entry]');

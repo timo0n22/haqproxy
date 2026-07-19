@@ -92,6 +92,11 @@ CREATE TABLE IF NOT EXISTS dom_events (
     value TEXT,              -- усечённое значение
     stack TEXT               -- stack trace на момент вызова
 );
+
+CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 `
 
 // Store — обёртка над *sql.DB. Потокобезопасен (database/sql имеет пул соединений);

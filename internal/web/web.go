@@ -19,6 +19,18 @@ import (
 	webassets "github.com/timo0n22/haqproxy/web"
 )
 
+// Ключи настроек в store (вкладка Settings).
+const (
+	SettingCollabDomain  = "collab_domain"
+	SettingCollabAPI     = "collab_api"
+	SettingCollabSecret  = "collab_secret"
+	SettingUITheme       = "ui_theme"
+	SettingUIWindowAlpha = "ui_window_alpha"
+)
+
+// DefaultTheme — тема по умолчанию, если не выбрана.
+const DefaultTheme = "tokyo-night"
+
 // Server — веб-бэкенд UI.
 type Server struct {
 	store   *store.Store
@@ -112,6 +124,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /view/domlogger/rows", s.handleDomRows)
 	mux.HandleFunc("GET /view/domlogger/count", s.handleDomCount)
 
+	// Settings
+	mux.HandleFunc("GET /view/settings", s.handleSettingsView)
+	mux.HandleFunc("POST /api/settings/collaborator", s.handleSettingsCollaborator)
+	mux.HandleFunc("POST /api/settings/ui", s.handleSettingsUI)
+
 	// Scope
 	mux.HandleFunc("GET /view/scope", s.handleScopeView)
 	mux.HandleFunc("POST /api/scope", s.handleScopeAdd)
@@ -133,7 +150,7 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	s.render(w, "layout.html", map[string]any{"Entries": entries})
+	s.render(w, "layout.html", map[string]any{"Entries": entries, "Theme": s.currentTheme()})
 }
 
 func (s *Server) handleCACert(w http.ResponseWriter, r *http.Request) {
