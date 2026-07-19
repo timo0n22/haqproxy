@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/loginovartem/haqproxy/internal/rawhttp"
+	"github.com/timo0n22/haqproxy/internal/rawhttp"
 )
 
 // Finding — одна находка (без entry_id, его проставляет вызывающий).

@@ -1,4 +1,4 @@
-module github.com/loginovartem/haqproxy
+module github.com/timo0n22/haqproxy
 
 go 1.26.4
 

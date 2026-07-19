@@ -21,10 +21,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loginovartem/haqproxy/internal/ca"
-	"github.com/loginovartem/haqproxy/internal/domlogger"
-	"github.com/loginovartem/haqproxy/internal/rawhttp"
-	"github.com/loginovartem/haqproxy/internal/store"
+	"github.com/timo0n22/haqproxy/internal/ca"
+	"github.com/timo0n22/haqproxy/internal/domlogger"
+	"github.com/timo0n22/haqproxy/internal/rawhttp"
+	"github.com/timo0n22/haqproxy/internal/store"
 )
 
 // Proxy — перехватывающий прокси.

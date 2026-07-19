@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/loginovartem/haqproxy/internal/rawhttp"
+	"github.com/timo0n22/haqproxy/internal/rawhttp"
 )
 
 func parseResp(t *testing.T, raw string) *rawhttp.Message {

@@ -10,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/loginovartem/haqproxy/internal/ca"
-	"github.com/loginovartem/haqproxy/internal/proxy"
-	"github.com/loginovartem/haqproxy/internal/scanner"
-	"github.com/loginovartem/haqproxy/internal/store"
-	"github.com/loginovartem/haqproxy/internal/web"
+	"github.com/timo0n22/haqproxy/internal/ca"
+	"github.com/timo0n22/haqproxy/internal/proxy"
+	"github.com/timo0n22/haqproxy/internal/scanner"
+	"github.com/timo0n22/haqproxy/internal/store"
+	"github.com/timo0n22/haqproxy/internal/web"
 )
 
 func main() {

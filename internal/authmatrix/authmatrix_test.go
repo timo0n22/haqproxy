@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/loginovartem/haqproxy/internal/store"
+	"github.com/timo0n22/haqproxy/internal/store"
 )
 
 func TestApplyOverridesReplaceExisting(t *testing.T) {

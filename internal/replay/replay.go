@@ -14,7 +14,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/loginovartem/haqproxy/internal/rawhttp"
+	"github.com/timo0n22/haqproxy/internal/rawhttp"
 )
 
 // Result — исход одной отправки.

@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/loginovartem/haqproxy/internal/rawhttp"
+	"github.com/timo0n22/haqproxy/internal/rawhttp"
 )
 
 // MagicPath — путь, на который сниппет шлёт отчёты и который прокси перехватывает.

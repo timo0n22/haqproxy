@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loginovartem/haqproxy/internal/rawhttp"
-	"github.com/loginovartem/haqproxy/internal/replay"
-	"github.com/loginovartem/haqproxy/internal/store"
+	"github.com/timo0n22/haqproxy/internal/rawhttp"
+	"github.com/timo0n22/haqproxy/internal/replay"
+	"github.com/timo0n22/haqproxy/internal/store"
 )
 
 // Row — результат прогона под одной identity.

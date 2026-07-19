@@ -12,11 +12,11 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/loginovartem/haqproxy/internal/collaboratorclient"
-	"github.com/loginovartem/haqproxy/internal/httpql"
-	"github.com/loginovartem/haqproxy/internal/replay"
-	"github.com/loginovartem/haqproxy/internal/store"
-	webassets "github.com/loginovartem/haqproxy/web"
+	"github.com/timo0n22/haqproxy/internal/collaboratorclient"
+	"github.com/timo0n22/haqproxy/internal/httpql"
+	"github.com/timo0n22/haqproxy/internal/replay"
+	"github.com/timo0n22/haqproxy/internal/store"
+	webassets "github.com/timo0n22/haqproxy/web"
 )
 
 // Server — веб-бэкенд UI.

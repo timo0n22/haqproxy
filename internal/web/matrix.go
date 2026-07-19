@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/loginovartem/haqproxy/internal/authmatrix"
-	"github.com/loginovartem/haqproxy/internal/store"
+	"github.com/timo0n22/haqproxy/internal/authmatrix"
+	"github.com/timo0n22/haqproxy/internal/store"
 )
 
 func (s *Server) handleMatrixView(w http.ResponseWriter, r *http.Request) {

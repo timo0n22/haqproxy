@@ -16,7 +16,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/loginovartem/haqproxy/internal/collaborator"
+	"github.com/timo0n22/haqproxy/internal/collaborator"
 )
 
 func main() {

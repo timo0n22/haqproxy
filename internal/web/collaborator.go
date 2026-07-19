@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/loginovartem/haqproxy/internal/collaboratorclient"
+	"github.com/timo0n22/haqproxy/internal/collaboratorclient"
 )
 
 // tokenView — токен + готовый payload для отображения.
