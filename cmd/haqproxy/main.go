@@ -12,6 +12,7 @@ import (
 
 	"github.com/loginovartem/haqproxy/internal/ca"
 	"github.com/loginovartem/haqproxy/internal/proxy"
+	"github.com/loginovartem/haqproxy/internal/scanner"
 	"github.com/loginovartem/haqproxy/internal/store"
 	"github.com/loginovartem/haqproxy/internal/web"
 )
@@ -47,6 +48,18 @@ func main() {
 	}
 
 	p := proxy.New(rootCA, st, logger)
+
+	// Пассивный scanner-lite: прогоняем правила по каждому проксированному
+	// ответу в отдельной горутине, чтобы не задерживать проксирование.
+	p.AfterRecord = func(entryID int64, rawReq, rawResp []byte) {
+		go func() {
+			for _, f := range scanner.Scan(rawReq, rawResp) {
+				if err := st.AddFinding(entryID, f.Rule, f.Severity, f.Detail); err != nil {
+					logger.Printf("finding insert: %v", err)
+				}
+			}
+		}()
+	}
 
 	// Прокси в отдельной горутине.
 	go func() {

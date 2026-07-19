@@ -32,6 +32,11 @@ type Proxy struct {
 	Logger      *log.Logger
 	DialTimeout time.Duration
 	IOTimeout   time.Duration
+
+	// AfterRecord, если задан, вызывается после сохранения записи истории
+	// (например, пассивным scanner-lite). Вызывается синхронно из горутины
+	// обработки соединения; тяжёлую работу выносите в отдельную горутину.
+	AfterRecord func(entryID int64, rawReq, rawResp []byte)
 }
 
 // New создаёт прокси с разумными таймаутами.
@@ -252,8 +257,13 @@ func (p *Proxy) record(scheme, host string, port int, method, path string, rawRe
 	if errStr != "" {
 		e.Error = &errStr
 	}
-	if _, err := p.Store.InsertEntry(e); err != nil {
+	id, err := p.Store.InsertEntry(e)
+	if err != nil {
 		p.logf("store insert: %v", err)
+		return
+	}
+	if p.AfterRecord != nil && len(rawResp) > 0 {
+		p.AfterRecord(id, rawReq, rawResp)
 	}
 }
 

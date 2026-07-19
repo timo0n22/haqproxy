@@ -86,6 +86,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("DELETE /api/identities/{id}", s.handleIdentityDelete)
 	mux.HandleFunc("POST /api/matrix/run", s.handleMatrixRun)
 
+	// Findings (scanner-lite)
+	mux.HandleFunc("GET /view/findings", s.handleFindingsView)
+	mux.HandleFunc("GET /view/findings/rows", s.handleFindingsRows)
+	mux.HandleFunc("GET /view/findings/count", s.handleFindingsCount)
+
 	// Scope
 	mux.HandleFunc("GET /view/scope", s.handleScopeView)
 	mux.HandleFunc("POST /api/scope", s.handleScopeAdd)

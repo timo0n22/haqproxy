@@ -1,0 +1,37 @@
+{{define "findings_view"}}
+<div class="toolbar">
+  <h2>Findings</h2>
+  <span class="hint">Пассивный scanner-lite: подсказки «стоит посмотреть», не подтверждённые уязвимости.</span>
+  <span style="margin-left:auto;"
+        hx-get="/view/findings/rows" hx-target="#findings-rows" hx-trigger="click">↻ обновить</span>
+</div>
+<div class="content">
+  <div class="split">
+    <div class="left">
+      <table class="grid">
+        <thead><tr><th>#</th><th>Severity</th><th>Правило</th><th>Host</th><th>Path</th></tr></thead>
+        <tbody id="findings-rows" hx-get="/view/findings/rows" hx-trigger="load, every 5s">
+          {{template "findings_rows" .}}
+        </tbody>
+      </table>
+    </div>
+    <div class="right" id="finding-detail">
+      <div class="empty">Выберите находку слева.</div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "findings_rows"}}
+{{range .Findings}}
+<tr hx-get="/view/entry/{{.EntryID}}" hx-target="#finding-detail" hx-swap="innerHTML" style="cursor:pointer;">
+  <td>{{.EntryID}}</td>
+  <td class="sev-{{.Severity}}">{{.Severity}}</td>
+  <td>{{.RuleName}}</td>
+  <td>{{.Host}}</td>
+  <td title="{{.Detail}}">{{.Path}}</td>
+</tr>
+{{else}}
+<tr><td colspan="5" class="empty">Пока находок нет. Походите через прокси по целям в scope.</td></tr>
+{{end}}
+{{end}}
