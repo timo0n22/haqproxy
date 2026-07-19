@@ -19,11 +19,11 @@
          onclick="setActive(this)">🧮 Matrix</div>
     <div class="nav-item" hx-get="/view/findings" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">🔎 Findings
-      <span class="badge" hx-get="/view/findings/count" hx-trigger="load, every 5s" hx-swap="innerHTML">0</span>
+      <span class="badge" hx-get="/view/findings/count" hx-trigger="load, every 5s" hx-target="this" hx-swap="innerHTML">0</span>
     </div>
     <div class="nav-item" hx-get="/view/domlogger" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">🧬 DOM
-      <span class="badge" hx-get="/view/domlogger/count" hx-trigger="load, every 5s" hx-swap="innerHTML">0</span>
+      <span class="badge" hx-get="/view/domlogger/count" hx-trigger="load, every 5s" hx-target="this" hx-swap="innerHTML">0</span>
     </div>
     <div class="nav-item" hx-get="/view/collaborator" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">📡 Collaborator</div>
