@@ -27,6 +27,8 @@ func main() {
 		dnsAddr  = flag.String("dns", ":53", "адрес DNS-листенера")
 		httpAddr = flag.String("http", ":80", "адрес HTTP-логгера")
 		apiAddr  = flag.String("api", ":8081", "адрес API")
+		ns1      = flag.String("ns1", "", "имя первого nameserver (по умолчанию ns1.<zone>)")
+		ns2      = flag.String("ns2", "", "имя второго nameserver (по умолчанию ns2.<zone>)")
 		dataDir  = flag.String("data", ".", "каталог для БД interactions")
 	)
 	flag.Parse()
@@ -35,6 +37,9 @@ func main() {
 
 	if *secret == "" {
 		logger.Fatal("не задан -secret (или HAQPROXY_COLLAB_SECRET) — API был бы открыт")
+	}
+	if *ip == "" {
+		logger.Fatal("не задан -ip: без IP авторитативный сервер не сможет отвечать A-записями")
 	}
 
 	store, err := collaborator.OpenStore(filepath.Join(*dataDir, "collaborator.db"))
@@ -46,6 +51,7 @@ func main() {
 	srv := collaborator.NewServer(collaborator.Config{
 		Zone: *zone, IP: *ip, Secret: *secret,
 		DNS: *dnsAddr, HTTP: *httpAddr, API: *apiAddr,
+		NS1: *ns1, NS2: *ns2,
 	}, store, logger)
 
 	logger.Printf("zone=%s ip=%s dns=%s http=%s api=%s", *zone, *ip, *dnsAddr, *httpAddr, *apiAddr)

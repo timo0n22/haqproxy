@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/miekg/dns"
 )
@@ -19,6 +20,8 @@ type Config struct {
 	DNS    string // адрес DNS-листенера, например ":53"
 	HTTP   string // адрес HTTP-листенера, например ":80"
 	API    string // адрес API-листенера, например ":8081"
+	NS1    string // имя первого nameserver (по умолчанию ns1.<zone>)
+	NS2    string // имя второго nameserver (по умолчанию ns2.<zone>)
 }
 
 // Server связывает store и слушатели.
@@ -27,22 +30,42 @@ type Server struct {
 	store  *Store
 	logger *log.Logger
 	zone   string // нормализованная зона в нижнем регистре без точек по краям
+	ns1    string
+	ns2    string
+	serial uint32
 }
 
 // NewServer создаёт сервер.
 func NewServer(cfg Config, store *Store, logger *log.Logger) *Server {
+	zone := strings.ToLower(strings.Trim(cfg.Zone, "."))
+	ns1 := strings.ToLower(strings.Trim(cfg.NS1, "."))
+	if ns1 == "" {
+		ns1 = "ns1." + zone
+	}
+	ns2 := strings.ToLower(strings.Trim(cfg.NS2, "."))
+	if ns2 == "" {
+		ns2 = "ns2." + zone
+	}
 	return &Server{
 		cfg:    cfg,
 		store:  store,
 		logger: logger,
-		zone:   strings.ToLower(strings.Trim(cfg.Zone, ".")),
+		zone:   zone,
+		ns1:    ns1,
+		ns2:    ns2,
+		serial: uint32(time.Now().Unix()),
 	}
 }
 
 // ---------- DNS ----------
 
-// ServeDNS реализует dns.Handler: логирует КАЖДЫЙ запрос и отвечает A-записью
-// на IP VPS (чтобы последующий HTTP от той же цели тоже пришёл к нам).
+// ServeDNS реализует dns.Handler: логирует КАЖДЫЙ запрос (это и есть основной
+// OOB-сигнал) и отвечает как авторитативный сервер зоны.
+//
+// Ключевое для пути «кастомные NS всего домена → VPS» (§10.3, вариант B): чтобы
+// регистратор принял делегацию и зона считалась живой, сервер отвечает не только
+// A-записью на IP VPS (wildcard-catch-all для любого поддомена), но и SOA/NS для
+// апекса — их проверяют pre-delegation проверки регистраторов и резолверы.
 func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	m := new(dns.Msg)
 	m.SetReply(r)
@@ -56,15 +79,57 @@ func (s *Server) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 			s.logf("dns store: %v", err)
 		}
 		s.logf("DNS %s %s from %s", dns.TypeToString[q.Qtype], name, ip)
-
-		if q.Qtype == dns.TypeA && s.cfg.IP != "" {
-			rr, err := dns.NewRR(q.Name + " 60 IN A " + s.cfg.IP)
-			if err == nil {
-				m.Answer = append(m.Answer, rr)
-			}
-		}
+		s.answerQuestion(m, q)
 	}
 	_ = w.WriteMsg(m)
+}
+
+// answerQuestion формирует ответ на один вопрос.
+func (s *Server) answerQuestion(m *dns.Msg, q dns.Question) {
+	apex := dns.Fqdn(s.zone)
+	switch q.Qtype {
+	case dns.TypeA:
+		// Wildcard catch-all: любой поддомен резолвится в IP VPS, чтобы
+		// последующий HTTP от цели тоже пришёл к нам.
+		if ip := net.ParseIP(s.cfg.IP).To4(); ip != nil {
+			m.Answer = append(m.Answer, &dns.A{
+				Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+				A:   ip,
+			})
+		} else {
+			m.Ns = append(m.Ns, s.soa())
+		}
+	case dns.TypeNS:
+		if strings.EqualFold(q.Name, apex) {
+			m.Answer = append(m.Answer,
+				&dns.NS{Hdr: dns.RR_Header{Name: apex, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 3600}, Ns: dns.Fqdn(s.ns1)},
+				&dns.NS{Hdr: dns.RR_Header{Name: apex, Rrtype: dns.TypeNS, Class: dns.ClassINET, Ttl: 3600}, Ns: dns.Fqdn(s.ns2)},
+			)
+		} else {
+			m.Ns = append(m.Ns, s.soa())
+		}
+	case dns.TypeSOA:
+		m.Answer = append(m.Answer, s.soa())
+	default:
+		// NODATA для прочих типов (AAAA и т.п.): кладём SOA в authority —
+		// это форсирует откат цели на A-запись (→ HTTP-хит к нам по IPv4).
+		m.Ns = append(m.Ns, s.soa())
+	}
+}
+
+// soa возвращает SOA-запись зоны.
+func (s *Server) soa() *dns.SOA {
+	apex := dns.Fqdn(s.zone)
+	return &dns.SOA{
+		Hdr:     dns.RR_Header{Name: apex, Rrtype: dns.TypeSOA, Class: dns.ClassINET, Ttl: 3600},
+		Ns:      dns.Fqdn(s.ns1),
+		Mbox:    "hostmaster." + apex,
+		Serial:  s.serial,
+		Refresh: 7200,
+		Retry:   3600,
+		Expire:  1209600,
+		Minttl:  3600,
+	}
 }
 
 // StartDNS запускает UDP и TCP DNS-листенеры (блокирует до ошибки).
