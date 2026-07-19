@@ -7,7 +7,7 @@
 Работает на рабочей машине (роль «атакующей»): годится и против домашней лабы,
 и против реальных bug bounty целей.
 
-## Что уже есть (этапы 0–4, 6)
+## Что уже есть (этапы 0–6)
 
 - **Proxy + History** — весь HTTP(S)-трафик пишется в SQLite сырыми байтами.
   MITM реализован **собственным парсером поверх `net.Conn`** (не через net/http и
@@ -29,6 +29,10 @@
   в `<head>`; отчёты идут на «магический» путь того же origin, который прокси
   перехватывает локально (без mixed-content/CORS). История хранит оригинальные
   байты ответа — инъекция видна только в браузере.
+- **Collaborator (OOB)** — VPS-бинарник `cmd/collaborator` (авторитативный DNS на
+  `miekg/dns` + HTTP-логгер + API с Bearer-авторизацией, своя SQLite) и
+  клиентская часть в UI: генерация токенов `<token>.oob.<домен>` с заметками и
+  опрос VPS с корреляцией interactions по токену.
 
 Фронтенд — htmx поверх `html/template`, всё встроено в бинарник через `embed`.
 Node/сборка не нужны.
@@ -71,7 +75,7 @@ HTTP-прокси `127.0.0.1:8080`.
 
 ```
 cmd/haqproxy/       — бинарник рабочей машины: proxy + история + веб-UI
-cmd/collaborator/   — бинарник для VPS: DNS+HTTP OOB-слушатель (этап 5, заглушка)
+cmd/collaborator/   — бинарник для VPS: DNS+HTTP OOB-слушатель + API
 internal/
   store/            — SQLite (modernc.org/sqlite, без CGO)
   rawhttp/          — побайтово-точный парсер HTTP/1.x поверх net.Conn
@@ -82,16 +86,33 @@ internal/
   authmatrix/       — прогон запроса под разными identity + эвристика IDOR
   scanner/          — пассивные правила scanner-lite
   domlogger/        — инъекция DOM-sink-трекера + перехват отчётов
+  collaborator/     — серверная часть OOB (DNS+HTTP+API) для VPS
+  collaboratorclient/ — генерация токенов + опрос VPS
   web/              — HTTP-хендлеры + html/template (htmx)
 web/                — встраиваемые шаблоны и статика (htmx, css)
 ```
 
-## Дальше по ТЗ (`haqproxy.md`)
+## Collaborator: запуск
 
-Остался этап 5 — Collaborator (VPS: DNS+HTTP OOB-слушатель на `miekg/dns` +
-клиентская часть с генерацией токенов и опросом VPS + инфраструктурный шаг с
-NS-делегацией). Схема БД под токены уже заведена в `internal/store`, бинарник
-`cmd/collaborator` пока заглушка.
+На VPS:
+
+```bash
+go build -o collaborator ./cmd/collaborator
+HAQPROXY_COLLAB_SECRET=… ./collaborator -zone oob.example.com -ip <IP-VPS> \
+  -dns :53 -http :80 -api :8081
+```
+
+На рабочей машине — передать haqproxy адрес API и секрет:
+
+```bash
+./haqproxy -collab-domain oob.example.com -collab-api http://<IP-VPS>:8081 \
+  -collab-secret …   # или через HAQPROXY_COLLAB_SECRET
+```
+
+**Инфраструктурный шаг (не код, §10.3 ТЗ):** нужна именно NS-делегация зоны на
+этот VPS (а не wildcard A-запись), иначе не увидите DNS-резолвы — самый надёжный
+OOB-сигнал, проходящий через egress-firewall. Проще всего — отдельный дешёвый
+домен с кастомными NS на VPS.
 
 ## Осознанные ограничения v1
 

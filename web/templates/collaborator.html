@@ -1,0 +1,67 @@
+{{define "collaborator_view"}}
+<div class="toolbar">
+  <h2>Collaborator</h2>
+  <span class="hint">OOB-взаимодействия (DNS/HTTP) для SSRF, blind-инъекций и т.п.</span>
+</div>
+<div class="content">
+  <div class="split">
+    <div class="left">
+      <div class="rawpane">
+        <h3>OOB-payload'ы</h3>
+        <form hx-post="/api/oob/generate" hx-target="#oob-tokens" hx-swap="innerHTML"
+              hx-on::after-request="this.reset()" style="display:flex; gap:8px; margin-bottom:10px;">
+          <input type="text" class="grow" name="note" placeholder="заметка (напр. SSRF в callback_url заказа #123)">
+          <button class="primary" type="submit">Сгенерировать</button>
+        </form>
+        <div id="oob-tokens">{{template "oob_tokens" .}}</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="rawpane">
+        <h3>Interactions (опрос VPS)</h3>
+        <div id="collab-interactions" hx-get="/view/collaborator/interactions" hx-trigger="load, every 6s">
+          <div class="hint">Загрузка…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "oob_tokens"}}
+<div class="hint" style="margin-bottom:6px;">Базовый домен: <code class="k">{{.Domain}}</code></div>
+{{range .Tokens}}
+<div class="scope-row">
+  <span class="pat">{{.Payload}}</span>
+</div>
+<div class="hint" style="margin:0 0 6px 4px;">{{.Note}}</div>
+{{else}}
+<div class="hint">Пока нет сгенерированных payload'ов.</div>
+{{end}}
+{{end}}
+
+{{define "collab_interactions"}}
+{{if .NotConfigured}}
+<div class="hint">VPS не настроен. Запустите haqproxy с флагами
+  <code class="k">-collab-api</code>, <code class="k">-collab-secret</code>,
+  <code class="k">-collab-domain</code>.</div>
+{{else if .Error}}
+<div class="err">Ошибка опроса VPS: {{.Error}}</div>
+{{else if .Rows}}
+<table class="grid">
+  <thead><tr><th>Kind</th><th>Token</th><th>Source IP</th><th>Детали</th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+  <tr {{if .Known}}style="background:rgba(70,193,122,.14);"{{end}}>
+    <td class="method">{{.Kind}}</td>
+    <td>{{.Token}}{{if .Known}} <span class="hint">✓ {{.Note}}</span>{{end}}</td>
+    <td>{{.SourceIP}}</td>
+    <td title="{{.Raw}}"><code class="k">{{.Raw}}</code></td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+{{else}}
+<div class="hint">Взаимодействий пока нет.</div>
+{{end}}
+{{end}}

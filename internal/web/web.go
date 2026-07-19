@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/loginovartem/haqproxy/internal/collaboratorclient"
 	"github.com/loginovartem/haqproxy/internal/httpql"
 	"github.com/loginovartem/haqproxy/internal/replay"
 	"github.com/loginovartem/haqproxy/internal/store"
@@ -26,6 +27,16 @@ type Server struct {
 	tabs    *tabManager
 	logger  *log.Logger
 	timeout time.Duration
+
+	collabDomain string
+	collab       *collaboratorclient.Client
+}
+
+// SetCollaborator задаёт параметры Collaborator: базовый домен для payload'ов
+// и клиента для опроса VPS.
+func (s *Server) SetCollaborator(domain, apiBase, secret string) {
+	s.collabDomain = domain
+	s.collab = collaboratorclient.New(apiBase, secret)
 }
 
 // New создаёт веб-сервер. caPEM — PEM корневого CA для отдачи на установку.
@@ -90,6 +101,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /view/findings", s.handleFindingsView)
 	mux.HandleFunc("GET /view/findings/rows", s.handleFindingsRows)
 	mux.HandleFunc("GET /view/findings/count", s.handleFindingsCount)
+
+	// Collaborator (OOB)
+	mux.HandleFunc("GET /view/collaborator", s.handleCollabView)
+	mux.HandleFunc("POST /api/oob/generate", s.handleOOBGenerate)
+	mux.HandleFunc("GET /view/collaborator/interactions", s.handleCollabInteractions)
 
 	// DOM Logger
 	mux.HandleFunc("GET /view/domlogger", s.handleDomView)

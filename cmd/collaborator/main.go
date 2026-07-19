@@ -1,18 +1,66 @@
-// Command collaborator — OOB-слушатель для VPS (DNS + HTTP), §10 ТЗ.
+// Command collaborator — OOB-слушатель для VPS (§10.2 ТЗ): авторитативный DNS +
+// HTTP-логгер + API с Bearer-авторизацией, своя SQLite.
 //
-// Заглушка этапа 5: сам сервер (miekg/dns авторитативный листенер + HTTP-логгер
-// + API с Bearer-авторизацией) реализуется в отдельной сессии. Оставлено, чтобы
-// зафиксировать структуру репозитория из ТЗ (два бинарника из одного репо).
+// Инфраструктурный шаг (НЕ код, §10.3): нужна NS-делегация зоны на этот VPS,
+// а не просто wildcard A-запись — иначе DNS-резолвы (самый надёжный OOB-сигнал,
+// проходящий через egress-firewall) не будут видны. Проще всего — отдельный
+// дешёвый домен с кастомными NS на этот VPS.
+//
+// Секрет НЕ хардкодится: берётся из флага -secret или переменной окружения
+// HAQPROXY_COLLAB_SECRET.
 package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
+	"path/filepath"
+
+	"github.com/loginovartem/haqproxy/internal/collaborator"
 )
 
 func main() {
+	var (
+		zone     = flag.String("zone", "oob.example.com", "базовая зона (payload = <token>.<zone>)")
+		ip       = flag.String("ip", "", "IP для A-ответа (обычно IP этого VPS)")
+		secret   = flag.String("secret", os.Getenv("HAQPROXY_COLLAB_SECRET"), "общий секрет для API (Bearer)")
+		dnsAddr  = flag.String("dns", ":53", "адрес DNS-листенера")
+		httpAddr = flag.String("http", ":80", "адрес HTTP-логгера")
+		apiAddr  = flag.String("api", ":8081", "адрес API")
+		dataDir  = flag.String("data", ".", "каталог для БД interactions")
+	)
 	flag.Parse()
-	fmt.Fprintln(os.Stderr, "collaborator: этап 5, ещё не реализован (см. haqproxy.md §10)")
-	os.Exit(1)
+
+	logger := log.New(os.Stdout, "collab ", log.LstdFlags)
+
+	if *secret == "" {
+		logger.Fatal("не задан -secret (или HAQPROXY_COLLAB_SECRET) — API был бы открыт")
+	}
+
+	store, err := collaborator.OpenStore(filepath.Join(*dataDir, "collaborator.db"))
+	if err != nil {
+		logger.Fatalf("store: %v", err)
+	}
+	defer store.Close()
+
+	srv := collaborator.NewServer(collaborator.Config{
+		Zone: *zone, IP: *ip, Secret: *secret,
+		DNS: *dnsAddr, HTTP: *httpAddr, API: *apiAddr,
+	}, store, logger)
+
+	logger.Printf("zone=%s ip=%s dns=%s http=%s api=%s", *zone, *ip, *dnsAddr, *httpAddr, *apiAddr)
+
+	go func() {
+		if err := srv.StartHTTP(); err != nil {
+			logger.Fatalf("http: %v", err)
+		}
+	}()
+	go func() {
+		if err := srv.StartAPI(); err != nil {
+			logger.Fatalf("api: %v", err)
+		}
+	}()
+	if err := srv.StartDNS(); err != nil {
+		logger.Fatalf("dns: %v", err)
+	}
 }

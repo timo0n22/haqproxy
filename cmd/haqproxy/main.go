@@ -23,6 +23,10 @@ func main() {
 		webAddr   = flag.String("web", "127.0.0.1:5050", "адрес веб-UI")
 		dataDir   = flag.String("data", defaultDataDir(), "каталог данных (БД, CA)")
 		domlogger = flag.Bool("domlogger", true, "инжектить DOM-sink-трекер в HTML-ответы хостов в scope")
+
+		collabDomain = flag.String("collab-domain", "", "базовый домен Collaborator для payload'ов (напр. oob.example.com)")
+		collabAPI    = flag.String("collab-api", "", "адрес API VPS-Collaborator (напр. http://vps-ip:8081)")
+		collabSecret = flag.String("collab-secret", os.Getenv("HAQPROXY_COLLAB_SECRET"), "общий секрет API VPS-Collaborator")
 	)
 	flag.Parse()
 
@@ -47,6 +51,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf("web: %v", err)
 	}
+	websrv.SetCollaborator(*collabDomain, *collabAPI, *collabSecret)
 
 	p := proxy.New(rootCA, st, logger)
 	p.DOMLogger = *domlogger
