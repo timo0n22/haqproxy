@@ -16,6 +16,11 @@
             onclick="document.querySelectorAll('.sidebar .nav-item')[2].classList.add('active');document.querySelectorAll('.sidebar .nav-item')[0].classList.remove('active');">
       → в Matrix
     </button>
+    <button class="btn"
+            hx-get="/view/automate/from/{{.Entry.ID}}" hx-target="#main" hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.sidebar .nav-item')[3].classList.add('active');document.querySelectorAll('.sidebar .nav-item')[0].classList.remove('active');">
+      → в Automate
+    </button>
   </div>
   {{if .Entry.Error}}<div class="err">Ошибка: {{deref .Entry.Error}}</div>{{end}}
 

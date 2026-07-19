@@ -2,6 +2,9 @@
 <div class="toolbar">
   <h2>AuthMatrix</h2>
   <span class="hint">Один запрос под разными identity → сравнение доступа (IDOR / broken access control).</span>
+  <button class="btn danger" style="margin-left:auto;"
+          hx-post="/api/matrix/clear" hx-target="#matrix-results" hx-swap="innerHTML"
+          hx-confirm="Очистить сохранённые прогоны матрицы?">Очистить прогоны</button>
 </div>
 <div class="content">
   <div class="split">

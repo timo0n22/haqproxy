@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -42,6 +43,9 @@ type Server struct {
 
 	collabDomain string
 	collab       *collaboratorclient.Client
+
+	automateMu sync.Mutex
+	automate   *automateState
 }
 
 // SetCollaborator задаёт параметры Collaborator: базовый домен для payload'ов
@@ -123,6 +127,19 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /view/domlogger", s.handleDomView)
 	mux.HandleFunc("GET /view/domlogger/rows", s.handleDomRows)
 	mux.HandleFunc("GET /view/domlogger/count", s.handleDomCount)
+
+	// Automate (Intruder-подобный прогон по payload'ам)
+	mux.HandleFunc("GET /view/automate", s.handleAutomateView)
+	mux.HandleFunc("GET /view/automate/from/{id}", s.handleAutomateFrom)
+	mux.HandleFunc("POST /api/automate/run", s.handleAutomateRun)
+	mux.HandleFunc("POST /api/automate/clear", s.handleAutomateClear)
+
+	// Очистка накопленных данных
+	mux.HandleFunc("POST /api/history/clear", s.handleHistoryClear)
+	mux.HandleFunc("POST /api/findings/clear", s.handleFindingsClear)
+	mux.HandleFunc("POST /api/domlogger/clear", s.handleDomClear)
+	mux.HandleFunc("POST /api/matrix/clear", s.handleMatrixClear)
+	mux.HandleFunc("POST /api/oob/clear", s.handleOOBClear)
 
 	// Settings
 	mux.HandleFunc("GET /view/settings", s.handleSettingsView)

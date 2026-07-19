@@ -17,6 +17,8 @@
          onclick="setActive(this)">🔁 Replay</div>
     <div class="nav-item" hx-get="/view/matrix" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">🧮 Matrix</div>
+    <div class="nav-item" hx-get="/view/automate" hx-target="#main" hx-swap="innerHTML"
+         onclick="setActive(this)">🤖 Automate</div>
     <div class="nav-item" hx-get="/view/findings" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">🔎 Findings
       <span class="badge" hx-get="/view/findings/count" hx-trigger="load, every 5s" hx-target="this" hx-swap="innerHTML">0</span>

@@ -1,0 +1,65 @@
+{{define "automate_view"}}
+<div class="toolbar">
+  <h2>Automate</h2>
+  <span class="hint">Прогон запроса по списку payload'ов: маркер в запросе заменяется на каждую строку.</span>
+</div>
+<div class="content">
+  <div class="split">
+    <div class="left">
+      <div class="rawpane">
+        <form hx-post="/api/automate/run" hx-target="#automate-results" hx-swap="innerHTML">
+          <div class="target-row" style="margin-bottom:8px;">
+            <input type="text" class="host" name="host" placeholder="host" value="{{.Host}}">
+            <input type="number" class="port" name="port" placeholder="port" value="{{.Port}}">
+            <label class="check"><input type="checkbox" name="tls" value="1" {{if .TLS}}checked{{end}}> TLS</label>
+          </div>
+          <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
+            <span class="hint">Маркер:</span>
+            <input type="text" name="marker" value="{{.Marker}}" style="width:120px;">
+            <span class="hint">— где стоит в запросе, туда подставляется payload.</span>
+          </div>
+          <h3>Запрос</h3>
+          <textarea name="raw_request" rows="11" spellcheck="false"
+                    placeholder="GET /FUZZ HTTP/1.1&#10;Host: target&#10;&#10;">{{.RawReq}}</textarea>
+          <h3 style="margin-top:12px;">Payload'ы (по одному на строку)</h3>
+          <textarea name="payloads" rows="8" spellcheck="false"
+                    placeholder="admin&#10;.git/config&#10;../../etc/passwd&#10;test&#10;..."></textarea>
+          <div style="margin-top:10px;">
+            <button class="primary" type="submit">Запустить ▶</button>
+            <button class="btn" type="button"
+                    hx-post="/api/automate/clear" hx-target="#automate-results" hx-swap="innerHTML">Очистить результаты</button>
+          </div>
+          <div class="hint" style="margin-top:6px;">Не более {{5000}} payload'ов за прогон; отправка в 8 потоков.</div>
+        </form>
+      </div>
+    </div>
+    <div class="right">
+      <div id="automate-results">
+        {{template "automate_results" .}}
+      </div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "automate_results"}}
+{{if .Results}}
+<table class="grid">
+  <thead><tr><th>#</th><th>Payload</th><th>Статус</th><th>Длина</th><th>ms</th></tr></thead>
+  <tbody>
+  {{range .Results}}
+  <tr {{if .Suspicious}}style="background:rgba(224,175,104,.16);"{{end}}>
+    <td>{{.Index}}</td>
+    <td title="{{.Payload}}"><code class="k">{{.Payload}}</code></td>
+    <td class="{{statusClass .Status}}">{{status .Status}}{{if .Error}} <span class="err" title="{{.Error}}">err</span>{{end}}</td>
+    <td>{{.Length}}</td>
+    <td>{{.DurationMs}}</td>
+  </tr>
+  {{end}}
+  </tbody>
+</table>
+<div class="hint" style="margin-top:8px;">Подсвечены строки со статусом, отличным от самого частого — «стоит посмотреть».</div>
+{{else}}
+<div class="rawpane"><div class="hint">Заполните запрос с маркером и список payload'ов, затем «Запустить».</div></div>
+{{end}}
+{{end}}

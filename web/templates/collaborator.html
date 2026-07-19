@@ -12,6 +12,9 @@
               hx-on::after-request="this.reset()" style="display:flex; gap:8px; margin-bottom:10px;">
           <input type="text" class="grow" name="note" placeholder="заметка (напр. SSRF в callback_url заказа #123)">
           <button class="primary" type="submit">Сгенерировать</button>
+          <button class="btn danger" type="button"
+                  hx-post="/api/oob/clear" hx-target="#oob-tokens" hx-swap="innerHTML"
+                  hx-confirm="Очистить сгенерированные токены?">Очистить</button>
         </form>
         <div id="oob-tokens">{{template "oob_tokens" .}}</div>
       </div>

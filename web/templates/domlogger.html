@@ -2,6 +2,9 @@
 <div class="toolbar">
   <h2>DOM Logger</h2>
   <span class="hint">Инжектированный трекер опасных DOM-синков на хостах в scope. Работает только при включённой инъекции.</span>
+  <button class="btn danger" style="margin-left:auto;"
+          hx-post="/api/domlogger/clear" hx-target="#dom-rows" hx-swap="innerHTML"
+          hx-confirm="Очистить DOM-события?">Очистить</button>
 </div>
 <div class="content">
   <table class="grid">
