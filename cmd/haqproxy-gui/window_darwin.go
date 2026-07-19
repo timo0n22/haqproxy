@@ -14,6 +14,20 @@ static void haqSetWindowAlpha(void *win, double alpha) {
         [w setAlphaValue:alpha];
     });
 }
+
+// haqQuitOnClose завершает приложение при закрытии окна (красный крестик),
+// иначе процесс остаётся висеть в фоне. Подписываемся на NSWindowWillCloseNotification.
+static void haqQuitOnClose(void *win) {
+    if (win == NULL) return;
+    NSWindow *w = (__bridge NSWindow *)win;
+    [[NSNotificationCenter defaultCenter]
+        addObserverForName:NSWindowWillCloseNotification
+                    object:w
+                     queue:[NSOperationQueue mainQueue]
+                usingBlock:^(NSNotification *note){
+                    [NSApp terminate:nil];
+                }];
+}
 */
 import "C"
 
@@ -25,4 +39,12 @@ func setWindowAlpha(win unsafe.Pointer, alpha float64) {
 		return
 	}
 	C.haqSetWindowAlpha(win, C.double(alpha))
+}
+
+// quitOnClose завершает приложение при закрытии окна (красный крестик).
+func quitOnClose(win unsafe.Pointer) {
+	if win == nil {
+		return
+	}
+	C.haqQuitOnClose(win)
 }

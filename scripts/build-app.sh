@@ -54,3 +54,16 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 
 echo "==> готово: $APP"
+
+# Установка в /Applications (замена старой версии), чтобы не переносить вручную.
+# Пропустить: NO_INSTALL=1 ./scripts/build-app.sh
+DEST="/Applications/haqproxy.app"
+if [ "${NO_INSTALL:-0}" = "1" ]; then
+  echo "==> NO_INSTALL=1 — в /Applications не копирую"
+elif [ -w /Applications ] || [ -e "$DEST" ]; then
+  rm -rf "$DEST"
+  cp -R "$APP" "$DEST"
+  echo "==> установлено (заменено) в $DEST"
+else
+  echo "==> нет прав на /Applications; перенесите вручную: sudo cp -R $APP /Applications/"
+fi

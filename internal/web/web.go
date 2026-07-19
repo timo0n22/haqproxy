@@ -92,6 +92,7 @@ func (s *Server) Handler() http.Handler {
 
 	mux.HandleFunc("GET /", s.handleIndex)
 	mux.HandleFunc("GET /ca-cert", s.handleCACert)
+	mux.HandleFunc("POST /api/quit", s.handleQuit)
 
 	// History
 	mux.HandleFunc("GET /view/history", s.handleHistoryView)

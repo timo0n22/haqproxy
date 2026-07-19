@@ -37,6 +37,9 @@
     <div class="foot">
       TLS-перехват:<br>
       <a href="/ca-cert" download="haqproxy-ca.pem">скачать CA-сертификат</a>
+      <button class="btn danger" style="width:100%; margin-top:12px;"
+              hx-post="/api/quit" hx-swap="none"
+              hx-confirm="Завершить haqproxy?">⏻ Выход</button>
     </div>
   </nav>
   <main class="main" id="main">

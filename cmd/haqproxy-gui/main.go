@@ -84,8 +84,15 @@ func main() {
 		setWindowAlpha(w.Window(), backend.UIAlpha)
 	}
 
+	// Закрытие окна (крестик) завершает процесс, а не оставляет его в фоне.
+	quitOnClose(w.Window())
+
 	w.Navigate(url)
 	w.Run()
+
+	// На случай, если Run вернулся, но что-то держит процесс — выходим явно.
+	backend.Close()
+	os.Exit(0)
 }
 
 func defaultDataDir() string {

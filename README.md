@@ -73,8 +73,12 @@ go build -o haqproxy-gui ./cmd/haqproxy-gui   # CGO + WKWebView, только na
 
 ```bash
 ./scripts/build-app.sh   # требует ImageMagick, iconutil, sips
-open haqproxy.app
+# собирает haqproxy.app и сразу заменяет копию в /Applications
+# (NO_INSTALL=1 — не копировать в /Applications)
+open -a haqproxy
 ```
+
+Закрытие окна (крестик) завершает процесс; в сайдбаре внизу есть кнопка «⏻ Выход».
 
 **Headless (UI в браузере):**
 
