@@ -37,9 +37,8 @@
     <div class="foot">
       TLS-перехват:<br>
       <a href="/ca-cert" download="haqproxy-ca.pem">скачать CA-сертификат</a>
-      <button class="btn danger" style="width:100%; margin-top:12px;"
-              hx-post="/api/quit" hx-swap="none"
-              hx-confirm="Завершить haqproxy?">⏻ Выход</button>
+      <button class="btn danger" style="width:100%; margin-top:12px;" type="button"
+              hx-post="/api/quit" hx-swap="none">⏻ Выход</button>
     </div>
   </nav>
   <main class="main" id="main">
@@ -66,6 +65,36 @@
     var l = document.getElementById('alpha-val');
     if (l) l.textContent = Math.round(parseFloat(v)*100) + '%';
     haqPostUI('alpha=' + encodeURIComponent(v));
+  }
+
+  // Загрузка встроенного набора payload'ов в указанное поле Automate.
+  function haqLoadWordlist(name, replace, targetId){
+    if(!name) return;
+    fetch('/api/automate/wordlist?name=' + encodeURIComponent(name))
+      .then(function(r){ return r.text(); })
+      .then(function(t){
+        var el = document.getElementById(targetId || 'automate-payloads');
+        if(!el) return;
+        if(replace || !el.value.trim()) el.value = t;
+        else el.value = el.value.replace(/\s*$/, '') + '\n' + t;
+      });
+  }
+
+  // Генерация числового диапазона в поле payload'ов (перебор ID и т.п.).
+  function haqGenNumbers(fromId, toId, stepId, targetId){
+    var from = parseInt(document.getElementById(fromId).value, 10);
+    var to   = parseInt(document.getElementById(toId).value, 10);
+    var step = parseInt(document.getElementById(stepId).value, 10);
+    if(isNaN(from) || isNaN(to)) return;
+    if(isNaN(step) || step <= 0) step = 1;
+    var lines = [], cap = 10000;
+    if(to >= from){ for(var i=from; i<=to && lines.length<cap; i+=step) lines.push(i); }
+    else          { for(var i=from; i>=to && lines.length<cap; i-=step) lines.push(i); }
+    var el = document.getElementById(targetId);
+    if(!el) return;
+    var txt = lines.join('\n');
+    if(!el.value.trim()) el.value = txt;
+    else el.value = el.value.replace(/\s*$/, '') + '\n' + txt;
   }
 
   // Клик по строке истории — подсветка выбранной.

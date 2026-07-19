@@ -2,11 +2,8 @@
 <div class="toolbar">
   <h2>Findings</h2>
   <span class="hint">Пассивный scanner-lite: подсказки «стоит посмотреть», не подтверждённые уязвимости.</span>
-  <span style="margin-left:auto; cursor:pointer;"
-        hx-get="/view/findings/rows" hx-target="#findings-rows" hx-trigger="click">↻ обновить</span>
-  <button class="btn danger"
-          hx-post="/api/findings/clear" hx-target="#findings-rows" hx-swap="innerHTML"
-          hx-confirm="Очистить все находки?">Очистить</button>
+  <button class="btn danger" style="margin-left:auto;" type="button"
+          hx-post="/api/findings/clear" hx-target="#findings-rows" hx-swap="innerHTML">Очистить</button>
 </div>
 <div class="content">
   <div class="split">

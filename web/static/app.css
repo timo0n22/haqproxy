@@ -244,6 +244,9 @@ pre.raw {
 .sev-low { color: var(--accent); }
 .sev-info { color: var(--text-dim); }
 
+.pl-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+.pl-tools select, .pl-tools input { font-size: 12px; padding: 5px 7px; }
+
 .setrow { display: flex; flex-direction: column; gap: 6px; }
 .setrow > span { color: var(--text-dim); font-size: 12px; }
 .setrow select, .setrow input[type=range] { max-width: 320px; }

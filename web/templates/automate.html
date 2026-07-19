@@ -1,7 +1,7 @@
 {{define "automate_view"}}
 <div class="toolbar">
   <h2>Automate</h2>
-  <span class="hint">Прогон запроса по списку payload'ов: маркер в запросе заменяется на каждую строку.</span>
+  <span class="hint">Маркеры в запросе заменяются на payload'ы. Две позиции → все комбинации (матрица).</span>
 </div>
 <div class="content">
   <div class="split">
@@ -13,23 +13,58 @@
             <input type="number" class="port" name="port" placeholder="port" value="{{.Port}}">
             <label class="check"><input type="checkbox" name="tls" value="1" {{if .TLS}}checked{{end}}> TLS</label>
           </div>
-          <div style="margin-bottom:8px; display:flex; gap:8px; align-items:center;">
-            <span class="hint">Маркер:</span>
-            <input type="text" name="marker" value="{{.Marker}}" style="width:120px;">
-            <span class="hint">— где стоит в запросе, туда подставляется payload.</span>
-          </div>
+
           <h3>Запрос</h3>
-          <textarea name="raw_request" rows="11" spellcheck="false"
-                    placeholder="GET /FUZZ HTTP/1.1&#10;Host: target&#10;&#10;">{{.RawReq}}</textarea>
-          <h3 style="margin-top:12px;">Payload'ы (по одному на строку)</h3>
-          <textarea name="payloads" rows="8" spellcheck="false"
-                    placeholder="admin&#10;.git/config&#10;../../etc/passwd&#10;test&#10;..."></textarea>
-          <div style="margin-top:10px;">
+          <textarea name="raw_request" rows="9" spellcheck="false"
+                    placeholder="GET /FUZZ1 HTTP/1.1&#10;Host: target&#10;&#10;">{{.RawReq}}</textarea>
+
+          <h3 style="margin-top:14px;">Позиция 1 — маркер
+            <input type="text" name="marker" value="{{.Marker}}" style="width:90px;"></h3>
+          <div class="pl-tools">
+            <select onchange="haqLoadWordlist(this.value, true, 'automate-payloads'); this.selectedIndex=0;">
+              <option value="">набор → заменить</option>
+              {{range .Wordlists}}<option value="{{.Name}}">{{.Label}}</option>{{end}}
+            </select>
+            <select onchange="haqLoadWordlist(this.value, false, 'automate-payloads'); this.selectedIndex=0;">
+              <option value="">набор → добавить</option>
+              {{range .Wordlists}}<option value="{{.Name}}">{{.Label}}</option>{{end}}
+            </select>
+            <span class="hint">числа:</span>
+            <input type="number" id="num-from-1" placeholder="от" value="1" style="width:64px;">
+            <input type="number" id="num-to-1" placeholder="до" value="100" style="width:64px;">
+            <input type="number" id="num-step-1" placeholder="шаг" value="1" style="width:56px;">
+            <button class="btn" type="button" onclick="haqGenNumbers('num-from-1','num-to-1','num-step-1','automate-payloads')">Добавить числа</button>
+          </div>
+          <textarea id="automate-payloads" name="payloads" rows="6" spellcheck="false"
+                    placeholder="admin&#10;../../etc/passwd&#10;..."></textarea>
+
+          <h3 style="margin-top:14px;">Позиция 2 — маркер
+            <input type="text" name="marker2" value="{{.Marker2}}" style="width:90px;">
+            <span class="hint">(опционально, для матрицы)</span></h3>
+          <div class="pl-tools">
+            <select onchange="haqLoadWordlist(this.value, true, 'automate-payloads2'); this.selectedIndex=0;">
+              <option value="">набор → заменить</option>
+              {{range .Wordlists}}<option value="{{.Name}}">{{.Label}}</option>{{end}}
+            </select>
+            <select onchange="haqLoadWordlist(this.value, false, 'automate-payloads2'); this.selectedIndex=0;">
+              <option value="">набор → добавить</option>
+              {{range .Wordlists}}<option value="{{.Name}}">{{.Label}}</option>{{end}}
+            </select>
+            <span class="hint">числа:</span>
+            <input type="number" id="num-from-2" placeholder="от" value="1" style="width:64px;">
+            <input type="number" id="num-to-2" placeholder="до" value="100" style="width:64px;">
+            <input type="number" id="num-step-2" placeholder="шаг" value="1" style="width:56px;">
+            <button class="btn" type="button" onclick="haqGenNumbers('num-from-2','num-to-2','num-step-2','automate-payloads2')">Добавить числа</button>
+          </div>
+          <textarea id="automate-payloads2" name="payloads2" rows="4" spellcheck="false"
+                    placeholder="оставьте пустым для одиночного режима"></textarea>
+
+          <div style="margin-top:12px;">
             <button class="primary" type="submit">Запустить ▶</button>
             <button class="btn" type="button"
                     hx-post="/api/automate/clear" hx-target="#automate-results" hx-swap="innerHTML">Очистить результаты</button>
           </div>
-          <div class="hint" style="margin-top:6px;">Не более {{5000}} payload'ов за прогон; отправка в 8 потоков.</div>
+          <div class="hint" style="margin-top:6px;">Максимум {{5000}} запросов за прогон (для матрицы — комбинаций); отправка в 8 потоков.</div>
         </form>
       </div>
     </div>
@@ -45,12 +80,12 @@
 {{define "automate_results"}}
 {{if .Results}}
 <table class="grid">
-  <thead><tr><th>#</th><th>Payload</th><th>Статус</th><th>Длина</th><th>ms</th></tr></thead>
+  <thead><tr><th>#</th><th>Payload(s)</th><th>Статус</th><th>Длина</th><th>ms</th></tr></thead>
   <tbody>
   {{range .Results}}
   <tr {{if .Suspicious}}style="background:rgba(224,175,104,.16);"{{end}}>
     <td>{{.Index}}</td>
-    <td title="{{.Payload}}"><code class="k">{{.Payload}}</code></td>
+    <td><code class="k">{{range $i, $p := .Payloads}}{{if $i}} │ {{end}}{{$p}}{{end}}</code></td>
     <td class="{{statusClass .Status}}">{{status .Status}}{{if .Error}} <span class="err" title="{{.Error}}">err</span>{{end}}</td>
     <td>{{.Length}}</td>
     <td>{{.DurationMs}}</td>
@@ -60,6 +95,6 @@
 </table>
 <div class="hint" style="margin-top:8px;">Подсвечены строки со статусом, отличным от самого частого — «стоит посмотреть».</div>
 {{else}}
-<div class="rawpane"><div class="hint">Заполните запрос с маркером и список payload'ов, затем «Запустить».</div></div>
+<div class="rawpane"><div class="hint">Заполните запрос с маркером и payload'ы, затем «Запустить».</div></div>
 {{end}}
 {{end}}

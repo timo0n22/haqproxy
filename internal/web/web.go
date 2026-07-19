@@ -134,6 +134,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /view/automate/from/{id}", s.handleAutomateFrom)
 	mux.HandleFunc("POST /api/automate/run", s.handleAutomateRun)
 	mux.HandleFunc("POST /api/automate/clear", s.handleAutomateClear)
+	mux.HandleFunc("GET /api/automate/wordlist", s.handleAutomateWordlist)
 
 	// Очистка накопленных данных
 	mux.HandleFunc("POST /api/history/clear", s.handleHistoryClear)

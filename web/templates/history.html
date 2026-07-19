@@ -16,9 +16,8 @@
       только scope
     </label>
   </span>
-  <button class="btn danger" style="margin-left:auto;"
-          hx-post="/api/history/clear" hx-target="#history-rows" hx-swap="innerHTML"
-          hx-confirm="Очистить всю историю (и связанные находки)?">Очистить</button>
+  <button class="btn danger" style="margin-left:auto;" type="button"
+          hx-post="/api/history/clear" hx-target="#history-rows" hx-swap="innerHTML">Очистить</button>
 </div>
 <div class="content">
   <div class="split">
