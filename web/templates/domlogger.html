@@ -1,0 +1,27 @@
+{{define "domlogger_view"}}
+<div class="toolbar">
+  <h2>DOM Logger</h2>
+  <span class="hint">Инжектированный трекер опасных DOM-синков на хостах в scope. Работает только при включённой инъекции.</span>
+</div>
+<div class="content">
+  <table class="grid">
+    <thead><tr><th>#</th><th>Host</th><th>Sink</th><th>Значение</th></tr></thead>
+    <tbody id="dom-rows" hx-get="/view/domlogger/rows" hx-trigger="load, every 4s">
+      {{template "domlogger_rows" .}}
+    </tbody>
+  </table>
+</div>
+{{end}}
+
+{{define "domlogger_rows"}}
+{{range .Events}}
+<tr>
+  <td>{{.ID}}</td>
+  <td>{{.Host}}</td>
+  <td class="method">{{.Sink}}</td>
+  <td title="{{.Stack}}"><code class="k">{{.Value}}</code></td>
+</tr>
+{{else}}
+<tr><td colspan="4" class="empty">Событий пока нет. Добавьте хост в scope и походите по нему через прокси — при срабатывании опасного синка появится запись.</td></tr>
+{{end}}
+{{end}}

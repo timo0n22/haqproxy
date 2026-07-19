@@ -12,6 +12,7 @@ package proxy
 import (
 	"bufio"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -21,6 +22,7 @@ import (
 	"time"
 
 	"github.com/loginovartem/haqproxy/internal/ca"
+	"github.com/loginovartem/haqproxy/internal/domlogger"
 	"github.com/loginovartem/haqproxy/internal/rawhttp"
 	"github.com/loginovartem/haqproxy/internal/store"
 )
@@ -37,6 +39,10 @@ type Proxy struct {
 	// (например, пассивным scanner-lite). Вызывается синхронно из горутины
 	// обработки соединения; тяжёлую работу выносите в отдельную горутину.
 	AfterRecord func(entryID int64, rawReq, rawResp []byte)
+
+	// DOMLogger включает инъекцию DOM-sink-трекера в HTML-ответы хостов в scope
+	// (§9 ТЗ).
+	DOMLogger bool
 }
 
 // New создаёт прокси с разумными таймаутами.
@@ -183,6 +189,15 @@ func (p *Proxy) forward(conn net.Conn, msg *rawhttp.Message, defaultHost string,
 // пишет его клиенту и записывает запись истории.
 func (p *Proxy) forwardRaw(client net.Conn, reqMsg *rawhttp.Message, sendBytes []byte, host string, port int, scheme string) {
 	method, path := methodPath(reqMsg)
+
+	// Перехват отчётов DOMLogger: запрос идёт на тот же origin (через нас), поэтому
+	// ни mixed-content, ни CORS не мешают. Обрабатываем локально, не форвардим и
+	// не пишем в историю.
+	if p.DOMLogger && strings.HasPrefix(path, domlogger.MagicPath) {
+		p.handleDomReport(client, reqMsg, host)
+		return
+	}
+
 	start := time.Now()
 
 	upstream, err := p.dialUpstream(host, port, scheme == "https")
@@ -208,8 +223,18 @@ func (p *Proxy) forwardRaw(client net.Conn, reqMsg *rawhttp.Message, sendBytes [
 		if code, ok := respMsg.StatusCode(); ok {
 			status = &code
 		}
-		// пересылаем ответ клиенту как есть
-		_, _ = client.Write(respMsg.Raw)
+		// В историю пишем ОРИГИНАЛЬНЫЕ байты (rawResp). Клиенту, если хост в scope
+		// и включён DOMLogger, отдаём копию с внедрённым скриптом — история
+		// побайтово не искажается.
+		out := respMsg.Raw
+		if p.DOMLogger {
+			if inScope, _ := p.Store.InScope(host); inScope {
+				if injected, ok := domlogger.Inject(respMsg); ok {
+					out = injected
+				}
+			}
+		}
+		_, _ = client.Write(out)
 	}
 
 	dur := int(time.Since(start).Milliseconds())
@@ -218,6 +243,22 @@ func (p *Proxy) forwardRaw(client net.Conn, reqMsg *rawhttp.Message, sendBytes [
 		errStr = "upstream read: " + rerr.Error()
 	}
 	p.record(scheme, host, port, method, path, reqMsg.Raw, rawResp, status, &dur, errStr)
+}
+
+// handleDomReport принимает отчёт инжектированного DOM-логгера, сохраняет
+// событие и отвечает 204, не форвардя запрос дальше.
+func (p *Proxy) handleDomReport(client net.Conn, reqMsg *rawhttp.Message, host string) {
+	var payload struct {
+		Sink  string `json:"sink"`
+		Value string `json:"value"`
+		Stack string `json:"stack"`
+	}
+	if err := json.Unmarshal(reqMsg.Body, &payload); err == nil && payload.Sink != "" {
+		if err := p.Store.AddDomEvent(host, payload.Sink, payload.Value, payload.Stack); err != nil {
+			p.logf("dom event insert: %v", err)
+		}
+	}
+	_, _ = client.Write([]byte("HTTP/1.1 204 No Content\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\n"))
 }
 
 func (p *Proxy) dialUpstream(host string, port int, useTLS bool) (net.Conn, error) {

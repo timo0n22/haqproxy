@@ -21,6 +21,10 @@
          onclick="setActive(this)">🔎 Findings
       <span class="badge" hx-get="/view/findings/count" hx-trigger="load, every 5s" hx-swap="innerHTML">0</span>
     </div>
+    <div class="nav-item" hx-get="/view/domlogger" hx-target="#main" hx-swap="innerHTML"
+         onclick="setActive(this)">🧬 DOM
+      <span class="badge" hx-get="/view/domlogger/count" hx-trigger="load, every 5s" hx-swap="innerHTML">0</span>
+    </div>
     <div class="nav-item" hx-get="/view/scope" hx-target="#main" hx-swap="innerHTML"
          onclick="setActive(this)">🎯 Scope</div>
     <div class="spacer"></div>

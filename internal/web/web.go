@@ -91,6 +91,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /view/findings/rows", s.handleFindingsRows)
 	mux.HandleFunc("GET /view/findings/count", s.handleFindingsCount)
 
+	// DOM Logger
+	mux.HandleFunc("GET /view/domlogger", s.handleDomView)
+	mux.HandleFunc("GET /view/domlogger/rows", s.handleDomRows)
+	mux.HandleFunc("GET /view/domlogger/count", s.handleDomCount)
+
 	// Scope
 	mux.HandleFunc("GET /view/scope", s.handleScopeView)
 	mux.HandleFunc("POST /api/scope", s.handleScopeAdd)

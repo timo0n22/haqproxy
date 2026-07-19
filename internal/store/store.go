@@ -83,6 +83,15 @@ CREATE TABLE IF NOT EXISTS oob_tokens (
     note TEXT,
     created_at REAL NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS dom_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp REAL NOT NULL,
+    host TEXT NOT NULL,
+    sink TEXT NOT NULL,      -- имя опасного DOM-синка (innerHTML, eval, ...)
+    value TEXT,              -- усечённое значение
+    stack TEXT               -- stack trace на момент вызова
+);
 `
 
 // Store — обёртка над *sql.DB. Потокобезопасен (database/sql имеет пул соединений);

@@ -22,6 +22,7 @@ func main() {
 		proxyAddr = flag.String("proxy", "127.0.0.1:8080", "адрес MITM-прокси")
 		webAddr   = flag.String("web", "127.0.0.1:5050", "адрес веб-UI")
 		dataDir   = flag.String("data", defaultDataDir(), "каталог данных (БД, CA)")
+		domlogger = flag.Bool("domlogger", true, "инжектить DOM-sink-трекер в HTML-ответы хостов в scope")
 	)
 	flag.Parse()
 
@@ -48,6 +49,7 @@ func main() {
 	}
 
 	p := proxy.New(rootCA, st, logger)
+	p.DOMLogger = *domlogger
 
 	// Пассивный scanner-lite: прогоняем правила по каждому проксированному
 	// ответу в отдельной горутине, чтобы не задерживать проксирование.
