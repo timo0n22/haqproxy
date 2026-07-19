@@ -1,7 +1,10 @@
 # Go build artifacts
 /haqproxy
+/haqproxy-gui
 /collaborator
+/collaborator-linux-amd64
 *.exe
+*.app
 
 # Данные времени выполнения (БД, CA-сертификаты)
 /.haqproxy/

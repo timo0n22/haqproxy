@@ -1,6 +1,6 @@
-// Command haqproxy — единый бинарник для рабочей машины: MITM-прокси + вся
-// история + веб-UI (htmx). Веб открывать в браузере НАПРЯМУЮ (не через сам
-// прокси), чтобы не проксировать самого себя.
+// Command haqproxy — headless-бинарник: MITM-прокси + вся история + веб-UI на
+// HTTP-порту. Веб открывать в браузере НАПРЯМУЮ (не через сам прокси). Нативная
+// GUI-обёртка того же UI — в cmd/haqproxy-gui.
 package main
 
 import (
@@ -10,11 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/timo0n22/haqproxy/internal/ca"
-	"github.com/timo0n22/haqproxy/internal/proxy"
-	"github.com/timo0n22/haqproxy/internal/scanner"
-	"github.com/timo0n22/haqproxy/internal/store"
-	"github.com/timo0n22/haqproxy/internal/web"
+	"github.com/timo0n22/haqproxy/internal/app"
 )
 
 func main() {
@@ -32,54 +28,22 @@ func main() {
 
 	logger := log.New(os.Stdout, "", log.LstdFlags)
 
-	if err := os.MkdirAll(*dataDir, 0o700); err != nil {
-		logger.Fatalf("data dir: %v", err)
-	}
-
-	st, err := store.Open(filepath.Join(*dataDir, "haqproxy.db"))
+	backend, err := app.Setup(app.Options{
+		ProxyAddr:    *proxyAddr,
+		DataDir:      *dataDir,
+		DOMLogger:    *domlogger,
+		CollabDomain: *collabDomain,
+		CollabAPI:    *collabAPI,
+		CollabSecret: *collabSecret,
+	}, logger)
 	if err != nil {
-		logger.Fatalf("store: %v", err)
+		logger.Fatalf("setup: %v", err)
 	}
-	defer st.Close()
+	defer backend.Close()
 
-	rootCA, err := ca.LoadOrCreate(filepath.Join(*dataDir, "ca"))
-	if err != nil {
-		logger.Fatalf("ca: %v", err)
-	}
+	logger.Printf("web UI:   http://%s  (установите CA из http://%s/ca-cert)", *webAddr, *webAddr)
 
-	websrv, err := web.New(st, rootCA.CertPEM(), logger)
-	if err != nil {
-		logger.Fatalf("web: %v", err)
-	}
-	websrv.SetCollaborator(*collabDomain, *collabAPI, *collabSecret)
-
-	p := proxy.New(rootCA, st, logger)
-	p.DOMLogger = *domlogger
-
-	// Пассивный scanner-lite: прогоняем правила по каждому проксированному
-	// ответу в отдельной горутине, чтобы не задерживать проксирование.
-	p.AfterRecord = func(entryID int64, rawReq, rawResp []byte) {
-		go func() {
-			for _, f := range scanner.Scan(rawReq, rawResp) {
-				if err := st.AddFinding(entryID, f.Rule, f.Severity, f.Detail); err != nil {
-					logger.Printf("finding insert: %v", err)
-				}
-			}
-		}()
-	}
-
-	// Прокси в отдельной горутине.
-	go func() {
-		if err := p.ListenAndServe(*proxyAddr); err != nil {
-			logger.Fatalf("proxy: %v", err)
-		}
-	}()
-
-	logger.Printf("data dir: %s", *dataDir)
-	logger.Printf("web UI:   http://%s", *webAddr)
-	logger.Printf("proxy:    http://%s  (установите CA из http://%s/ca-cert)", *proxyAddr, *webAddr)
-
-	if err := http.ListenAndServe(*webAddr, websrv.Handler()); err != nil {
+	if err := http.ListenAndServe(*webAddr, backend.Handler); err != nil {
 		logger.Fatalf("web serve: %v", err)
 	}
 }

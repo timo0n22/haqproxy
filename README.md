@@ -50,18 +50,31 @@ expr      := condition (and|or condition)*
 
 ## Запуск
 
+Два варианта одного и того же UI:
+
+**Нативное окно (десктоп-приложение, macOS):**
+
 ```bash
-go build -o haqproxy ./cmd/haqproxy
-./haqproxy
+go build -o haqproxy-gui ./cmd/haqproxy-gui   # CGO + WKWebView, только native-сборка
+./haqproxy-gui
 ```
 
-По умолчанию:
+Открывает тот же htmx-интерфейс в нативном окне ОС (не в браузере). UI-сервер
+слушает на локальном эфемерном порту, доступ только с loopback.
+
+**Headless (UI в браузере):**
+
+```bash
+go build -o haqproxy ./cmd/haqproxy
+./haqproxy   # веб-UI на http://127.0.0.1:5050, открывать в браузере НАПРЯМУЮ
+```
+
+По умолчанию (оба):
 
 - MITM-прокси: `127.0.0.1:8080`
-- Веб-UI: `http://127.0.0.1:5050` (открывать в браузере **напрямую**, не через прокси)
 - Данные (БД + CA): `~/.haqproxy`
 
-Флаги: `-proxy`, `-web`, `-data`.
+Флаги: `-proxy`, `-data`, `-domlogger`, `-collab-*` (у headless ещё `-web`).
 
 ### TLS-перехват
 
@@ -74,9 +87,11 @@ HTTP-прокси `127.0.0.1:8080`.
 ## Архитектура
 
 ```
-cmd/haqproxy/       — бинарник рабочей машины: proxy + история + веб-UI
+cmd/haqproxy/       — headless-бинарник: proxy + история + веб-UI (браузер)
+cmd/haqproxy-gui/   — то же в нативном окне ОС (WKWebView, macOS)
 cmd/collaborator/   — бинарник для VPS: DNS+HTTP OOB-слушатель + API
 internal/
+  app/              — общая обвязка backend (store+CA+proxy+web) для обоих бинарников
   store/            — SQLite (modernc.org/sqlite, без CGO)
   rawhttp/          — побайтово-точный парсер HTTP/1.x поверх net.Conn
   replay/           — сырой сокет-клиент (порт repeater.py)
