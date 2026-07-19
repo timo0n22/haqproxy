@@ -1,0 +1,35 @@
+{{define "entry_detail"}}
+<div class="rawpane">
+  <div class="meta-row">
+    <span class="method m-{{.Entry.Method}}">{{.Entry.Method}}</span>
+    <span>{{.Entry.Scheme}}://{{.Entry.Host}}:{{.Entry.Port}}</span>
+    <span class="{{statusClass .Entry.RespStatus}}">{{status .Entry.RespStatus}}</span>
+    <span>{{dur .Entry.DurationMs}} ms</span>
+    <span class="src src-{{.Entry.Source}}">{{.Entry.Source}}</span>
+    <button class="btn"
+            hx-get="/view/replay/from/{{.Entry.ID}}" hx-target="#main" hx-swap="innerHTML"
+            onclick="document.querySelectorAll('.sidebar .nav-item')[1].classList.add('active');document.querySelectorAll('.sidebar .nav-item')[0].classList.remove('active');">
+      → в Replay
+    </button>
+  </div>
+  {{if .Entry.Error}}<div class="err">Ошибка: {{deref .Entry.Error}}</div>{{end}}
+
+  <h3>Request</h3>
+  <pre class="raw">{{bytesStr .Entry.RawRequest}}</pre>
+
+  <h3>Response</h3>
+  {{if .Entry.RawResponse}}
+  <pre class="raw">{{bytesStr .Entry.RawResponse}}</pre>
+  {{else}}
+  <div class="hint">Ответа нет.</div>
+  {{end}}
+
+  <div class="meta-row">
+    <form hx-post="/api/entry/{{.Entry.ID}}/meta" hx-swap="none" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <input type="text" name="tag" placeholder="тег (напр. IDOR?)" value="{{deref .Entry.Tag}}">
+      <input type="text" name="note" class="grow" placeholder="заметка" value="{{deref .Entry.Note}}" style="min-width:200px;">
+      <button class="btn" type="submit">Сохранить</button>
+    </form>
+  </div>
+</div>
+{{end}}

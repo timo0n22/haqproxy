@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>haqproxy</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/htmx.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="brand">haq<span>proxy</span></div>
+    <div class="nav-item active" hx-get="/view/history" hx-target="#main" hx-swap="innerHTML"
+         onclick="setActive(this)">🗂️ History</div>
+    <div class="nav-item" hx-get="/view/replay" hx-target="#main" hx-swap="innerHTML"
+         onclick="setActive(this)">🔁 Replay</div>
+    <div class="nav-item" hx-get="/view/scope" hx-target="#main" hx-swap="innerHTML"
+         onclick="setActive(this)">🎯 Scope</div>
+    <div class="spacer"></div>
+    <div class="foot">
+      TLS-перехват:<br>
+      <a href="/ca-cert" download="haqproxy-ca.pem">скачать CA-сертификат</a>
+    </div>
+  </nav>
+  <main class="main" id="main">
+    {{template "history_view" .}}
+  </main>
+</div>
+<script>
+  function setActive(el) {
+    document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+  }
+  // Клик по строке истории — подсветка выбранной.
+  document.body.addEventListener('click', function(e){
+    const tr = e.target.closest('tr[data-entry]');
+    if (tr) {
+      document.querySelectorAll('tr[data-entry].sel').forEach(x=>x.classList.remove('sel'));
+      tr.classList.add('sel');
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{{define "replay_view"}}
+<div class="tabs" id="replay-tabs">
+  {{template "replay_tabs" .}}
+</div>
+<div class="content" id="replay-main">
+  {{template "replay_tab" .}}
+</div>
+{{end}}
+
+{{define "replay_tabs"}}
+{{range .Tabs}}
+<div class="tab {{if eq .ID $.ActiveID}}active{{end}}"
+     hx-get="/view/replay/tab/{{.ID}}" hx-target="#main" hx-swap="innerHTML">
+  {{.Name}}
+  <span class="x" hx-post="/api/replay/close/{{.ID}}" hx-target="#main" hx-swap="innerHTML"
+        hx-on:click="event.stopPropagation()">✕</span>
+</div>
+{{end}}
+<div class="tab" hx-post="/api/replay/new" hx-target="#main" hx-swap="innerHTML">＋</div>
+{{end}}
+
+{{define "replay_tab"}}
+{{if .Active}}
+<div class="replay-body">
+  <form class="replay-req" hx-post="/api/replay/send/{{.Active.ID}}" hx-target="#replay-resp" hx-swap="innerHTML">
+    <div class="target-row">
+      <input type="text" class="host" name="host" placeholder="host" value="{{.Active.Host}}">
+      <input type="number" class="port" name="port" placeholder="port" value="{{.Active.Port}}">
+      <label class="check"><input type="checkbox" name="tls" value="1" {{if .Active.TLS}}checked{{end}}> TLS</label>
+      <button class="primary" type="submit">Send ▶</button>
+    </div>
+    <textarea name="raw_request" spellcheck="false"
+              placeholder="GET / HTTP/1.1&#10;Host: example.com&#10;&#10;">{{.Active.RawRequest}}</textarea>
+    <div class="hint">Отправляется байт-в-байт: свой сокет, без нормализации заголовков.</div>
+  </form>
+  <div class="replay-resp" id="replay-resp">
+    {{template "replay_response" .}}
+  </div>
+</div>
+{{else}}
+<div class="empty">Нет открытых вкладок. Нажмите ＋, чтобы создать.</div>
+{{end}}
+{{end}}
+
+{{define "replay_response"}}
+{{with .Active}}
+{{if .LastError}}<div class="err">Ошибка: {{.LastError}}</div>{{end}}
+{{if or .LastResponse .LastError}}
+<div class="meta-row">
+  <span class="{{statusClass .LastStatus}}">{{status .LastStatus}}</span>
+  <span>{{.LastDurationMs}} ms</span>
+</div>
+{{end}}
+{{if .LastResponse}}
+<pre class="raw" style="max-height:70vh;">{{.LastResponse}}</pre>
+{{else}}
+<div class="hint">Ответ появится здесь после отправки.</div>
+{{end}}
+{{end}}
+{{end}}

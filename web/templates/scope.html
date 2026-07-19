@@ -1,0 +1,36 @@
+{{define "scope_view"}}
+<div class="toolbar">
+  <h2>Scope</h2>
+  <form hx-post="/api/scope" hx-target="#scope-list" hx-swap="innerHTML"
+        style="display:flex; gap:8px; flex:1;" hx-on::after-request="this.reset()">
+    <input type="text" class="grow" name="pattern" placeholder="*.example.com или api.example.com">
+    <button class="primary" type="submit">Добавить</button>
+  </form>
+</div>
+<div class="content">
+  <div class="scope-list" id="scope-list">
+    {{template "scope_list" .}}
+  </div>
+  <div class="scope-list hint">
+    Scope фильтрует историю (флаг «только scope») и определяет, куда прокси инжектит
+    полезные фичи в следующих этапах. Wildcard <code class="k">*</code> — любой сегмент.
+    Если scope пуст — весь трафик считается интересным.
+  </div>
+</div>
+{{end}}
+
+{{define "scope_list"}}
+{{range .Scope}}
+<div class="scope-row {{if not .Enabled}}off{{end}}">
+  <label class="check">
+    <input type="checkbox" {{if .Enabled}}checked{{end}}
+           hx-post="/api/scope/{{.ID}}/toggle" hx-target="#scope-list" hx-swap="innerHTML"
+           name="enabled" value="1">
+  </label>
+  <span class="pat">{{.Pattern}}</span>
+  <button class="btn danger" hx-delete="/api/scope/{{.ID}}" hx-target="#scope-list" hx-swap="innerHTML">Удалить</button>
+</div>
+{{else}}
+<div class="empty">Scope пуст.</div>
+{{end}}
+{{end}}

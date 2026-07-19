@@ -1,0 +1,56 @@
+{{define "history_view"}}
+<div class="toolbar">
+  <h2>History</h2>
+  <input type="text" class="grow" name="q" placeholder='HTTPQL: method.eq:"POST" and status.gte:400'
+         hx-get="/view/history/rows" hx-target="#history-rows" hx-trigger="keyup changed delay:400ms, search"
+         hx-include="#history-filters">
+  <span id="history-filters" style="display:flex; gap:8px; align-items:center;">
+    <select name="source" hx-get="/view/history/rows" hx-target="#history-rows" hx-trigger="change" hx-include="[name=q]">
+      <option value="">все источники</option>
+      <option value="proxy">proxy</option>
+      <option value="replay">replay</option>
+    </select>
+    <label class="check">
+      <input type="checkbox" name="scope_only" value="1"
+             hx-get="/view/history/rows" hx-target="#history-rows" hx-trigger="change" hx-include="[name=q],[name=source]">
+      только scope
+    </label>
+  </span>
+</div>
+<div class="content">
+  <div class="split">
+    <div class="left">
+      <table class="grid">
+        <thead>
+          <tr><th>#</th><th>M</th><th>Host</th><th>Path</th><th>St</th><th>ms</th><th>src</th></tr>
+        </thead>
+        <tbody id="history-rows"
+               hx-get="/view/history/rows"
+               hx-trigger="load, every 4s"
+               hx-include="[name=q],[name=source],[name=scope_only]">
+          {{template "history_rows" .}}
+        </tbody>
+      </table>
+    </div>
+    <div class="right" id="entry-detail">
+      <div class="empty">Выберите запрос слева, чтобы увидеть сырой запрос и ответ.</div>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "history_rows"}}
+{{range .Entries}}
+<tr data-entry="{{.ID}}" hx-get="/view/entry/{{.ID}}" hx-target="#entry-detail" hx-swap="innerHTML">
+  <td>{{.ID}}</td>
+  <td class="method m-{{.Method}}">{{.Method}}</td>
+  <td>{{.Host}}</td>
+  <td title="{{.Path}}">{{.Path}}</td>
+  <td class="{{statusClass .RespStatus}}">{{status .RespStatus}}</td>
+  <td>{{dur .DurationMs}}</td>
+  <td><span class="src src-{{.Source}}">{{.Source}}</span></td>
+</tr>
+{{else}}
+<tr><td colspan="7" class="empty">Пока пусто. Настройте браузер на прокси и походите по сайтам.</td></tr>
+{{end}}
+{{end}}
