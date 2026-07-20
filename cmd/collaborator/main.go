@@ -21,7 +21,8 @@ import (
 
 func main() {
 	var (
-		zone     = flag.String("zone", "oob.example.com", "базовая зона (payload = <token>.<zone>)")
+		zone     = flag.String("zone", "oob.example.com", "зона авторитета для SOA/NS (при делегации всего домена — сам домен, напр. cyberist.ru)")
+		payload  = flag.String("payload-base", "", "база payload'ов для извлечения токена <token>.<base> (по умолчанию = -zone; при делегации всего домена укажите, напр., oob.cyberist.ru)")
 		ip       = flag.String("ip", "", "IP для A-ответа (обычно IP этого VPS)")
 		secret   = flag.String("secret", os.Getenv("HAQPROXY_COLLAB_SECRET"), "общий секрет для API (Bearer)")
 		dnsAddr  = flag.String("dns", ":53", "адрес DNS-листенера")
@@ -49,12 +50,12 @@ func main() {
 	defer store.Close()
 
 	srv := collaborator.NewServer(collaborator.Config{
-		Zone: *zone, IP: *ip, Secret: *secret,
+		Zone: *zone, PayloadBase: *payload, IP: *ip, Secret: *secret,
 		DNS: *dnsAddr, HTTP: *httpAddr, API: *apiAddr,
 		NS1: *ns1, NS2: *ns2,
 	}, store, logger)
 
-	logger.Printf("zone=%s ip=%s dns=%s http=%s api=%s", *zone, *ip, *dnsAddr, *httpAddr, *apiAddr)
+	logger.Printf("zone=%s payload-base=%s ip=%s dns=%s http=%s api=%s", *zone, *payload, *ip, *dnsAddr, *httpAddr, *apiAddr)
 
 	go func() {
 		if err := srv.StartHTTP(); err != nil {

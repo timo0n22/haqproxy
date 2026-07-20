@@ -14,30 +14,40 @@ import (
 
 // Config — настройки серверной части Collaborator.
 type Config struct {
-	Zone   string // базовая зона, например "oob.example.com" (payload = <token>.oob.example.com)
-	IP     string // IP, который отдаём A-записью (обычно IP самого VPS)
-	Secret string // общий секрет для API (Bearer)
-	DNS    string // адрес DNS-листенера, например ":53"
-	HTTP   string // адрес HTTP-листенера, например ":80"
-	API    string // адрес API-листенера, например ":8081"
-	NS1    string // имя первого nameserver (по умолчанию ns1.<zone>)
-	NS2    string // имя второго nameserver (по умолчанию ns2.<zone>)
+	Zone string // зона авторитета для SOA/NS, например "cyberist.ru" (вариант B — делегация всего домена)
+	// PayloadBase — база, под которой клиент выдаёт payload'ы (<token>.<PayloadBase>),
+	// именно относительно неё извлекается токен. Может отличаться от Zone: при
+	// делегации всего домена (Zone=cyberist.ru) payload'ы живут под oob.cyberist.ru,
+	// чтобы токен = метка слева от "oob.cyberist.ru", а не "oob". Пусто → = Zone.
+	PayloadBase string
+	IP          string // IP, который отдаём A-записью (обычно IP самого VPS)
+	Secret      string // общий секрет для API (Bearer)
+	DNS         string // адрес DNS-листенера, например ":53"
+	HTTP        string // адрес HTTP-листенера, например ":80"
+	API         string // адрес API-листенера, например ":8081"
+	NS1         string // имя первого nameserver (по умолчанию ns1.<zone>)
+	NS2         string // имя второго nameserver (по умолчанию ns2.<zone>)
 }
 
 // Server связывает store и слушатели.
 type Server struct {
-	cfg    Config
-	store  *Store
-	logger *log.Logger
-	zone   string // нормализованная зона в нижнем регистре без точек по краям
-	ns1    string
-	ns2    string
-	serial uint32
+	cfg         Config
+	store       *Store
+	logger      *log.Logger
+	zone        string // нормализованная зона авторитета (SOA/NS) в нижнем регистре без точек по краям
+	payloadBase string // база для извлечения токена (payload = <token>.<payloadBase>)
+	ns1         string
+	ns2         string
+	serial      uint32
 }
 
 // NewServer создаёт сервер.
 func NewServer(cfg Config, store *Store, logger *log.Logger) *Server {
 	zone := strings.ToLower(strings.Trim(cfg.Zone, "."))
+	payloadBase := strings.ToLower(strings.Trim(cfg.PayloadBase, "."))
+	if payloadBase == "" {
+		payloadBase = zone
+	}
 	ns1 := strings.ToLower(strings.Trim(cfg.NS1, "."))
 	if ns1 == "" {
 		ns1 = "ns1." + zone
@@ -47,13 +57,14 @@ func NewServer(cfg Config, store *Store, logger *log.Logger) *Server {
 		ns2 = "ns2." + zone
 	}
 	return &Server{
-		cfg:    cfg,
-		store:  store,
-		logger: logger,
-		zone:   zone,
-		ns1:    ns1,
-		ns2:    ns2,
-		serial: uint32(time.Now().Unix()),
+		cfg:         cfg,
+		store:       store,
+		logger:      logger,
+		zone:        zone,
+		payloadBase: payloadBase,
+		ns1:         ns1,
+		ns2:         ns2,
+		serial:      uint32(time.Now().Unix()),
 	}
 }
 
@@ -201,15 +212,17 @@ func (s *Server) authorized(r *http.Request) bool {
 
 // ---------- helpers ----------
 
-// extractToken возвращает метку слева от базовой зоны. Для "abc.oob.example.com"
-// с зоной "oob.example.com" вернёт "abc". Если зона не совпала — крайнюю левую метку.
+// extractToken возвращает метку слева от payload-базы. Для "abc.oob.example.com"
+// с базой "oob.example.com" вернёт "abc"; если цель добавила префиксы
+// ("x.abc.oob.example.com") — тоже "abc" (метка, примыкающая к базе). Если база
+// не совпала — крайнюю левую метку.
 func (s *Server) extractToken(name string) string {
 	name = strings.TrimSuffix(name, ".")
-	if s.zone != "" && strings.HasSuffix(name, "."+s.zone) {
-		prefix := strings.TrimSuffix(name, "."+s.zone)
+	if s.payloadBase != "" && strings.HasSuffix(name, "."+s.payloadBase) {
+		prefix := strings.TrimSuffix(name, "."+s.payloadBase)
 		labels := strings.Split(prefix, ".")
 		if len(labels) > 0 {
-			return labels[len(labels)-1] // метка непосредственно слева от зоны
+			return labels[len(labels)-1] // метка непосредственно слева от payload-базы
 		}
 	}
 	labels := strings.Split(name, ".")
